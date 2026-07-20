@@ -1,0 +1,11 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+
+# Dependency / build dirs (none needed for this static app, but just in case)
+node_modules/
+dist/
+.vercel/
+.cache/
