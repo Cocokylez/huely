@@ -14,7 +14,8 @@ interface Props {
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 8;
-const TAP_SLOP = 6; // px of movement below which a pointerup counts as a tap
+const TAP_SLOP = 6;
+const GRID_STEPS = [0, 3, 4, 6, 8]; // columns; 0 = off
 
 function readVar(name: string, fallback: [number, number, number]): [number, number, number] {
   if (typeof window === "undefined") return fallback;
@@ -28,6 +29,13 @@ function readVar(name: string, fallback: [number, number, number]): [number, num
   ];
 }
 
+const toolChip = (active: boolean) =>
+  `rounded-full border px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
+    active
+      ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+      : "border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
+  }`;
+
 export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) {
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
@@ -37,14 +45,18 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
 
-  // Gesture bookkeeping (refs so handlers stay cheap).
+  // Artist tools
+  const [gridN, setGridN] = useState(0);
+  const [gray, setGray] = useState(false);
+  const [flip, setFlip] = useState(false);
+
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const downAt = useRef<{ x: number; y: number } | null>(null);
   const moved = useRef(0);
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
 
-  // ---- Draw the active layer (with progress fade + check marks on PBN) ----
+  // ---- Draw the active layer (progress fade + check marks on PBN) ----
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
@@ -57,7 +69,6 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
       view === "original" ? result.original : view === "pbn" ? result.pbnBase : result.oil;
 
     if (view === "pbn" && done && done.size) {
-      // Fade the pixels of finished colors toward the paper color so remaining work stands out.
       const [pr, pg, pb] = readVar("--paper", [244, 239, 230]);
       const out = new ImageData(result.w, result.h);
       out.data.set(layer.data);
@@ -91,7 +102,7 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
     }
   }, [result, view, ref, done]);
 
-  // ---- Zoom / pan helpers ----
+  // ---- Zoom / pan ----
   const clampPan = (s: number, x: number, y: number) => {
     const el = containerRef.current;
     if (!el) return { x, y };
@@ -125,8 +136,7 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
   };
 
   const relPoint = (clientX: number, clientY: number) => {
-    const el = containerRef.current!;
-    const r = el.getBoundingClientRect();
+    const r = containerRef.current!.getBoundingClientRect();
     return { x: clientX - r.left, y: clientY - r.top };
   };
 
@@ -157,8 +167,7 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
       const [a, b] = [...pointers.current.values()];
       const dist = Math.hypot(a.x - b.x, a.y - b.y);
       const mid = relPoint((a.x + b.x) / 2, (a.y + b.y) / 2);
-      const target = pinch.current.scale * (dist / pinch.current.dist);
-      zoomAt(mid.x, mid.y, target / scale);
+      zoomAt(mid.x, mid.y, (pinch.current.scale * (dist / pinch.current.dist)) / scale);
       moved.current += 20;
       return;
     }
@@ -179,8 +188,9 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
     const canvas = ref.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const x = Math.floor(((clientX - rect.left) / rect.width) * result.w);
+    let x = Math.floor(((clientX - rect.left) / rect.width) * result.w);
     const y = Math.floor(((clientY - rect.top) / rect.height) * result.h);
+    if (flip) x = result.w - 1 - x; // mirror the sample when flipped
     if (x < 0 || y < 0 || x >= result.w || y >= result.h) return;
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     if (!ctx) return;
@@ -196,59 +206,120 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
     if (wasTap && downAt.current) sample(e.clientX, e.clientY);
   };
 
+  // ---- Grid geometry ----
+  const gridLines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  if (gridN > 0) {
+    const rows = Math.max(1, Math.round((gridN * result.h) / result.w));
+    for (let i = 1; i < gridN; i++) {
+      const x = (i * result.w) / gridN;
+      gridLines.push({ x1: x, y1: 0, x2: x, y2: result.h });
+    }
+    for (let j = 1; j < rows; j++) {
+      const y = (j * result.h) / rows;
+      gridLines.push({ x1: 0, y1: y, x2: result.w, y2: y });
+    }
+  }
+
   return (
-    <div className="relative">
-      <div
-        ref={containerRef}
-        className="relative overflow-hidden rounded-[14px] bg-[var(--paper-2)] touch-none"
-        style={{ aspectRatio: `${result.w} / ${result.h}`, cursor: scale > 1 ? "grab" : "crosshair" }}
-        onWheel={onWheel}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-      >
-        <canvas
-          ref={ref}
-          className="absolute inset-0 h-full w-full"
-          style={{
-            transform: `translate(${tx}px, ${ty}px) scale(${scale})`,
-            transformOrigin: "0 0",
-            imageRendering: scale > 2.5 ? "pixelated" : "auto",
-          }}
-          aria-label="Your image"
-        />
+    <div>
+      {/* Artist tools */}
+      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+        <button
+          onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
+          className={toolChip(gridN > 0)}
+          title="Grid method — divide the reference into cells"
+        >
+          ⊞ {gridN > 0 ? `Grid ${gridN}` : "Grid"}
+        </button>
+        <button onClick={() => setGray((g) => !g)} className={toolChip(gray)} title="Value / grayscale study">
+          ◐ Value
+        </button>
+        <button onClick={() => setFlip((f) => !f)} className={toolChip(flip)} title="Flip horizontally to spot errors">
+          ⇄ Flip
+        </button>
       </div>
 
-      {/* Zoom controls */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1 shadow-[var(--shadow-sm)]">
-        <button
-          onClick={() => {
-            const el = containerRef.current!;
-            zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1 / 1.4);
-          }}
-          aria-label="Zoom out"
-          className="grid h-7 w-7 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+      <div className="relative">
+        <div
+          ref={containerRef}
+          className="relative touch-none overflow-hidden rounded-[14px] bg-[var(--paper-2)]"
+          style={{ aspectRatio: `${result.w} / ${result.h}`, cursor: scale > 1 ? "grab" : "crosshair" }}
+          onWheel={onWheel}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
         >
-          −
-        </button>
-        <button
-          onClick={resetZoom}
-          className="min-w-[42px] rounded-full px-2 text-[11px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)]"
-          title="Reset zoom"
-        >
-          {Math.round(scale * 100)}%
-        </button>
-        <button
-          onClick={() => {
-            const el = containerRef.current!;
-            zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1.4);
-          }}
-          aria-label="Zoom in"
-          className="grid h-7 w-7 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
-        >
-          ＋
-        </button>
+          <div
+            className="absolute inset-0"
+            style={{ transform: `translate(${tx}px, ${ty}px) scale(${scale})`, transformOrigin: "0 0" }}
+          >
+            <div className="absolute inset-0" style={{ transform: flip ? "scaleX(-1)" : "none" }}>
+              <canvas
+                ref={ref}
+                className="absolute inset-0 h-full w-full"
+                style={{
+                  imageRendering: scale > 2.5 ? "pixelated" : "auto",
+                  filter: gray ? "grayscale(1)" : "none",
+                }}
+                aria-label="Your image"
+              />
+              {gridLines.length > 0 && (
+                <svg
+                  viewBox={`0 0 ${result.w} ${result.h}`}
+                  preserveAspectRatio="none"
+                  className="pointer-events-none absolute inset-0 h-full w-full"
+                  style={{ mixBlendMode: "difference" }}
+                  aria-hidden
+                >
+                  {gridLines.map((l, i) => (
+                    <line
+                      key={i}
+                      x1={l.x1}
+                      y1={l.y1}
+                      x2={l.x2}
+                      y2={l.y2}
+                      stroke="white"
+                      strokeWidth={1}
+                      strokeOpacity={0.8}
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  ))}
+                </svg>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1 shadow-[var(--shadow-sm)]">
+          <button
+            onClick={() => {
+              const el = containerRef.current!;
+              zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1 / 1.4);
+            }}
+            aria-label="Zoom out"
+            className="grid h-7 w-7 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+          >
+            −
+          </button>
+          <button
+            onClick={resetZoom}
+            className="min-w-[42px] rounded-full px-2 text-[11px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+            title="Reset zoom"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+          <button
+            onClick={() => {
+              const el = containerRef.current!;
+              zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1.4);
+            }}
+            aria-label="Zoom in"
+            className="grid h-7 w-7 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+          >
+            ＋
+          </button>
+        </div>
       </div>
     </div>
   );
