@@ -7,20 +7,46 @@ interface HuelyDB extends DBSchema {
     value: HistoryProject;
     indexes: { createdAt: number };
   };
+  // Full working-res source image per project — device-local only, never uploaded.
+  sources: {
+    key: string;
+    value: { id: string; url: string };
+  };
 }
 
 let dbPromise: Promise<IDBPDatabase<HuelyDB>> | null = null;
 
 function getDb() {
   if (!dbPromise) {
-    dbPromise = openDB<HuelyDB>("huely", 1, {
+    dbPromise = openDB<HuelyDB>("huely", 2, {
       upgrade(db) {
-        const store = db.createObjectStore("projects", { keyPath: "id" });
-        store.createIndex("createdAt", "createdAt");
+        if (!db.objectStoreNames.contains("projects")) {
+          const store = db.createObjectStore("projects", { keyPath: "id" });
+          store.createIndex("createdAt", "createdAt");
+        }
+        if (!db.objectStoreNames.contains("sources")) {
+          db.createObjectStore("sources", { keyPath: "id" });
+        }
       },
     });
   }
   return dbPromise;
+}
+
+export async function saveSource(id: string, url: string): Promise<void> {
+  const db = await getDb();
+  await db.put("sources", { id, url });
+}
+
+export async function getSource(id: string): Promise<string | undefined> {
+  const db = await getDb();
+  const row = await db.get("sources", id);
+  return row?.url;
+}
+
+export async function removeSource(id: string): Promise<void> {
+  const db = await getDb();
+  await db.delete("sources", id);
 }
 
 export async function localList(): Promise<HistoryProject[]> {
@@ -42,6 +68,7 @@ export async function localGet(id: string): Promise<HistoryProject | undefined> 
 export async function localRemove(id: string): Promise<void> {
   const db = await getDb();
   await db.delete("projects", id);
+  await db.delete("sources", id).catch(() => {});
 }
 
 export async function localRename(id: string, name: string): Promise<void> {

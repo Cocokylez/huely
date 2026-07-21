@@ -1,5 +1,5 @@
 import type { HistoryProject } from "./types";
-import { localSave, localGet } from "./local";
+import { localSave, localGet, saveSource, getSource, removeSource } from "./local";
 import { cloudSave, cloudUpdate, cloudGet, cloudUpdateDone } from "./cloud";
 
 /** Save a new project — cloud when signed in, local IndexedDB otherwise. */
@@ -20,6 +20,35 @@ export async function getProject(
   id: string,
 ): Promise<HistoryProject | undefined> {
   return authed ? cloudGet(id) : localGet(id);
+}
+
+/**
+ * The full working-res source image is cached ON-DEVICE only (IndexedDB),
+ * regardless of auth — it never goes to the cloud. Lets a reopened project
+ * re-run the real pipeline at full res instead of showing the thumbnail.
+ */
+export async function cacheSource(id: string, dataUrl: string): Promise<void> {
+  try {
+    await saveSource(id, dataUrl);
+  } catch {
+    // Storage full or unavailable — fall back to the thumbnail on reopen.
+  }
+}
+
+export async function getCachedSource(id: string): Promise<string | undefined> {
+  try {
+    return await getSource(id);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function removeCachedSource(id: string): Promise<void> {
+  try {
+    await removeSource(id);
+  } catch {
+    // best effort
+  }
 }
 
 /** Patch just the progress (done indices) — cheap, no thumbnail regen. */

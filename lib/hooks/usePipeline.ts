@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { fileToImageData } from "@/lib/image/loadImage";
+import { fileToImageData, dataUrlToImageData } from "@/lib/image/loadImage";
 import { DEFAULT_COLOR_COUNT } from "@/lib/image/constants";
 import type { PipelineResult } from "@/lib/image/types";
 import type { PipelineStage, WorkerRequest, WorkerResponse } from "@/lib/worker/messages";
@@ -123,6 +123,33 @@ export function usePipeline() {
     [colorCount],
   );
 
+  // Re-run the full pipeline from a cached (device-local) source image, at the
+  // saved color count — used to reopen a project as a full-res workspace.
+  const processDataUrl = useCallback(async (url: string, count: number) => {
+    setError(null);
+    setStatus("processing");
+    setStage("painting");
+    clearPreview();
+    previewRef.current = null;
+    setPreviewUrl(url);
+    try {
+      const imageData = await dataUrlToImageData(url);
+      setColorCountState(count);
+      originalRef.current = imageData;
+      const req: WorkerRequest = {
+        type: "process",
+        id: ++idRef.current,
+        imageData,
+        colorCount: count,
+      };
+      workerRef.current?.postMessage(req);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not open that project.");
+      setStatus("error");
+      setStage(null);
+    }
+  }, []);
+
   const setColorCount = useCallback((n: number) => {
     setColorCountState(n);
     if (oilRef.current) {
@@ -148,5 +175,16 @@ export function usePipeline() {
     clearPreview();
   }, []);
 
-  return { status, stage, result, error, colorCount, previewUrl, process, setColorCount, reset };
+  return {
+    status,
+    stage,
+    result,
+    error,
+    colorCount,
+    previewUrl,
+    process,
+    processDataUrl,
+    setColorCount,
+    reset,
+  };
 }

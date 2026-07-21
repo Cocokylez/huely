@@ -20,3 +20,20 @@ export async function fileToImageData(file: File): Promise<ImageData> {
   bitmap.close();
   return ctx.getImageData(0, 0, w, h);
 }
+
+/** Decode a cached data URL (an already working-sized image) back into ImageData. */
+export async function dataUrlToImageData(url: string): Promise<ImageData> {
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const el = new Image();
+    el.onload = () => resolve(el);
+    el.onerror = () => reject(new Error("Could not decode cached image."));
+    el.src = url;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("Could not get a 2D canvas context.");
+  ctx.drawImage(img, 0, 0);
+  return ctx.getImageData(0, 0, canvas.width, canvas.height);
+}

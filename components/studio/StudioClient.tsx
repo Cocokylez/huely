@@ -6,7 +6,14 @@ import { usePipeline } from "@/lib/hooks/usePipeline";
 import { COLOR_COUNT_OPTIONS } from "@/lib/image/constants";
 import type { ViewMode } from "@/lib/image/types";
 import type { HistoryProject } from "@/lib/history/types";
-import { saveProject, updateProject, getProject, patchDone } from "@/lib/history/save";
+import {
+  saveProject,
+  updateProject,
+  getProject,
+  patchDone,
+  cacheSource,
+  getCachedSource,
+} from "@/lib/history/save";
 import { imageDataToThumb } from "@/lib/image/thumbnail";
 import { downloadImageData, printGuide, imageDataToDataUrl } from "@/lib/exports";
 import { useMixer } from "@/components/mixer/MixerProvider";
@@ -34,8 +41,18 @@ interface Props {
 }
 
 export function StudioClient({ authed, openId }: Props) {
-  const { status, stage, result, error, colorCount, previewUrl, process, setColorCount, reset } =
-    usePipeline();
+  const {
+    status,
+    stage,
+    result,
+    error,
+    colorCount,
+    previewUrl,
+    process,
+    processDataUrl,
+    setColorCount,
+    reset,
+  } = usePipeline();
   const { slots, loadSlots } = useMixer();
   const { toast } = useToast();
   const router = useRouter();
@@ -53,24 +70,40 @@ export function StudioClient({ authed, openId }: Props) {
   const thumbRef = useRef<string>("");
 
   const [restored, setRestored] = useState<HistoryProject | null>(null);
-  const openRestored = useCallback(
-    (id: string) => {
-      getProject(authed, id)
-        .then((p) => {
-          if (p) {
-            setRestored(p);
-            setMixSource(p.palette);
-            if (p.mixer.length) loadSlots(p.mixer);
-          }
-        })
-        .catch(() => toast("Couldn't open that project"));
+  const openProject = useCallback(
+    async (id: string) => {
+      try {
+        const p = await getProject(authed, id);
+        if (!p) return;
+        setMixSource(p.palette);
+        if (p.mixer.length) loadSlots(p.mixer);
+
+        const src = await getCachedSource(id);
+        if (src) {
+          // Full-res: reconstruct the whole workspace from the device-cached image.
+          setRestored(null);
+          setProjectId(p.id);
+          setName(p.name);
+          setSaved(true);
+          setDone(new Set(p.done));
+          setSample(null);
+          setView("oil");
+          pendingSaveRef.current = null;
+          await processDataUrl(src, p.colorCount);
+        } else {
+          // No local cache (e.g. opened on another device) → thumbnail fallback.
+          setRestored(p);
+        }
+      } catch {
+        toast("Couldn't open that project");
+      }
     },
-    [authed, loadSlots, toast],
+    [authed, loadSlots, toast, processDataUrl],
   );
 
   useEffect(() => {
-    if (openId) openRestored(openId);
-  }, [openId, openRestored]);
+    if (openId) openProject(openId);
+  }, [openId, openProject]);
 
   useEffect(() => {
     if (result) setMixSource(result.palette);
@@ -105,6 +138,8 @@ export function StudioClient({ authed, openId }: Props) {
           setProjectId(id);
           setName(nm);
           setDone(new Set());
+          // Cache the full working-res source on-device for full-res reopen.
+          cacheSource(id, imageDataToDataUrl(result.original));
         }
         setSaved(true);
       })
@@ -209,7 +244,7 @@ export function StudioClient({ authed, openId }: Props) {
     if (status === "processing") {
       return <Processing stage={stage} previewUrl={previewUrl} onCancel={startOver} />;
     }
-    return <Uploader onFile={handleFile} onOpenProject={openRestored} authed={authed} error={error} />;
+    return <Uploader onFile={handleFile} onOpenProject={openProject} authed={authed} error={error} />;
   }
 
   const total = result.palette.length;

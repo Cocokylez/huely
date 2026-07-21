@@ -93,11 +93,21 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
     return { x: clientX - r.left, y: clientY - r.top };
   };
 
-  const onWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const { x, y } = relPoint(e.clientX, e.clientY);
-    zoomAt(x, y, e.deltaY < 0 ? 1.15 : 1 / 1.15);
-  };
+  // Native, non-passive wheel listener so wheel-zoom over the canvas doesn't
+  // scroll the page (React's onWheel is passive → preventDefault is ignored).
+  const zoomRef = useRef(zoomAt);
+  zoomRef.current = zoomAt;
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const r = el.getBoundingClientRect();
+      zoomRef.current(e.clientX - r.left, e.clientY - r.top, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -193,9 +203,13 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
       <div className="relative">
         <div
           ref={containerRef}
-          className="relative touch-none overflow-hidden rounded-[14px] bg-[var(--paper-2)]"
-          style={{ aspectRatio: `${width} / ${height}`, cursor: scale > 1 ? "grab" : "crosshair" }}
-          onWheel={onWheel}
+          className="relative overflow-hidden rounded-[14px] bg-[var(--paper-2)]"
+          style={{
+            aspectRatio: `${width} / ${height}`,
+            cursor: scale > 1 ? "grab" : "crosshair",
+            // At 100% let the page scroll past the image; when zoomed we own the gesture to pan.
+            touchAction: scale > 1 ? "none" : "pan-y",
+          }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
