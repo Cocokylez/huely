@@ -21,6 +21,8 @@
     view: "oil",
     w: 0,
     h: 0,
+    lastSample: null, // hex of the most recently eyedropped color
+    mix: [],          // mixer slots: [{ hex, parts }]
   };
 
   // ---- Element refs ---------------------------------------------------------
@@ -77,8 +79,9 @@
     state.original = cx.getImageData(0, 0, w, h);
 
     showScreen("processing");
-    // Let the spinner paint before the heavy synchronous work starts.
-    requestAnimationFrame(() => setTimeout(runPipeline, 30));
+    // Yield once so the spinner paints before the heavy synchronous work starts.
+    // (Plain setTimeout, not rAF — rAF can be starved in a backgrounded/throttled tab.)
+    setTimeout(runPipeline, 30);
   }
 
   function runPipeline() {
@@ -347,23 +350,27 @@
   function buildPaletteUI() {
     paletteEl.innerHTML = "";
     state.palette.forEach((c, i) => {
-      const btn = document.createElement("button");
-      btn.className = "swatch";
-      btn.title = `Copy ${c.hex}`;
+      const hex = c.hex.toUpperCase();
       const numBg = luminance(c) > 140 ? "rgba(45,39,35,0.85)" : "rgba(255,255,255,0.9)";
       const numFg = luminance(c) > 140 ? "#fff" : "#2d2723";
-      btn.innerHTML =
-        `<span class="swatch-color" style="background:${c.hex}">` +
+
+      const card = document.createElement("div");
+      card.className = "swatch";
+      card.innerHTML =
+        `<div class="swatch-color" role="button" tabindex="0" title="Copy ${hex}" style="background:${c.hex}">` +
           `<span class="swatch-num" style="background:${numBg};color:${numFg}">${i + 1}</span>` +
-        `</span>` +
-        `<span class="swatch-info"><b>${c.hex.toUpperCase()}</b>` +
-        `<small>rgb(${c.r}, ${c.g}, ${c.b})</small></span>`;
-      btn.addEventListener("click", () => {
-        copyText(c.hex.toUpperCase());
-        showToast(`Copied ${c.hex.toUpperCase()}`);
-      });
-      paletteEl.appendChild(btn);
+        `</div>` +
+        `<div class="swatch-info"><b>${hex}</b><small>rgb(${c.r}, ${c.g}, ${c.b})</small></div>` +
+        `<div class="swatch-foot"><button class="swatch-mix">+ Mixer</button></div>`;
+
+      const copy = () => { copyText(hex); showToast(`Copied ${hex}`); };
+      const colorEl = card.querySelector(".swatch-color");
+      colorEl.addEventListener("click", copy);
+      colorEl.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); copy(); } });
+      card.querySelector(".swatch-mix").addEventListener("click", () => addMixColor(c.hex));
+      paletteEl.appendChild(card);
     });
+    populateMixSource();
   }
 
   // ==========================================================================
@@ -381,11 +388,13 @@
     const r = img.data[i], g = img.data[i + 1], b = img.data[i + 2];
     const hex = rgbToHex(r, g, b).toUpperCase();
 
+    state.lastSample = hex;
     $("sample").hidden = false;
     $("sample-swatch").style.background = hex;
     $("sample-hex").textContent = hex;
     $("sample-rgb").textContent = `rgb(${r}, ${g}, ${b})`;
     $("sample-copy").onclick = () => { copyText(hex); showToast(`Copied ${hex}`); };
+    $("sample-mix").onclick = () => addMixColor(hex);
   }
 
   // ==========================================================================
@@ -436,8 +445,14 @@
   // ==========================================================================
   const mix = (a, b, t) => Math.round(a + (b - a) * t);
   const luminance = (c) => 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
-  const toHex = (n) => n.toString(16).padStart(2, "0");
+  const clamp255 = (n) => Math.max(0, Math.min(255, Math.round(n)));
+  const toHex = (n) => clamp255(n).toString(16).padStart(2, "0");
   const rgbToHex = (r, g, b) => `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  const hexToRgb = (hex) => {
+    const h = hex.replace("#", "");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  };
+  const contrastInk = (r, g, b) => (0.299 * r + 0.587 * g + 0.114 * b > 140 ? "#2d2723" : "#fff");
 
   function copyText(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -472,9 +487,207 @@
   function reset() {
     state.original = state.oil = state.pbn = null;
     state.palette = [];
+    state.lastSample = null;
     fileInput.value = "";
     $("sample").hidden = true;
+    populateMixSource();
     showScreen("upload");
+  }
+
+  // ==========================================================================
+  //  Color naming — "what color is that?"
+  // ==========================================================================
+  const NAMED_COLORS = (() => {
+    const map = {
+      "Black": "#000000", "White": "#ffffff", "Silver": "#c0c0c0", "Gray": "#808080",
+      "Dim Gray": "#696969", "Charcoal": "#36454f", "Slate Gray": "#708090",
+      "Red": "#ff0000", "Crimson": "#dc143c", "Firebrick": "#b22222", "Dark Red": "#8b0000",
+      "Maroon": "#800000", "Tomato": "#ff6347", "Salmon": "#fa8072", "Coral": "#ff7f50",
+      "Indian Red": "#cd5c5c", "Terracotta": "#c65d3b", "Brick": "#9c342a",
+      "Orange": "#ffa500", "Dark Orange": "#ff8c00", "Pumpkin": "#e07b00", "Amber": "#ffbf00",
+      "Gold": "#ffd700", "Goldenrod": "#daa520", "Yellow": "#ffff00", "Khaki": "#c3b091",
+      "Mustard": "#e1ad01", "Cream": "#fffdd0", "Ivory": "#fffff0", "Beige": "#f5f5dc",
+      "Tan": "#d2b48c", "Sand": "#c2b280", "Ochre": "#cc7722", "Sienna": "#a0522d",
+      "Burnt Sienna": "#8a3324", "Umber": "#635147", "Raw Umber": "#826644",
+      "Chocolate": "#7b3f00", "Brown": "#8b5a2b", "Coffee": "#6f4e37", "Wheat": "#f5deb3",
+      "Olive": "#808000", "Olive Drab": "#6b8e23", "Chartreuse": "#7fff00",
+      "Lime": "#bfff00", "Yellow Green": "#9acd32", "Green": "#2e8b57", "Forest Green": "#228b22",
+      "Dark Green": "#006400", "Sage": "#9caf88", "Fern": "#5a8f4e", "Emerald": "#2ecc71",
+      "Mint": "#98ff98", "Teal": "#008080", "Pine": "#2f6f6a", "Sea Green": "#2e8b57",
+      "Turquoise": "#40e0d0", "Aqua": "#00ffff", "Cyan": "#00b7c2", "Sky Blue": "#87ceeb",
+      "Light Blue": "#add8e6", "Powder Blue": "#b0e0e6", "Cornflower": "#6495ed",
+      "Steel Blue": "#4682b4", "Cerulean": "#2a52be", "Blue": "#1f57c3", "Royal Blue": "#4169e1",
+      "Navy": "#000080", "Midnight Blue": "#191970", "Indigo": "#4b0082", "Slate Blue": "#6a5acd",
+      "Periwinkle": "#ccccff", "Lavender": "#b57edc", "Purple": "#800080", "Violet": "#8f00ff",
+      "Plum": "#8e4585", "Orchid": "#da70d6", "Magenta": "#c71585", "Fuchsia": "#ff00ff",
+      "Pink": "#ffc0cb", "Hot Pink": "#ff69b4", "Rose": "#e75480", "Blush": "#de5d83",
+      "Mauve": "#b784a7", "Peach": "#ffcba4", "Apricot": "#fbceb1", "Bisque": "#ffe4c4",
+      "Off White": "#f4efe6", "Bone": "#e3dac9", "Taupe": "#8b8589", "Stone": "#928e85",
+    };
+    return Object.entries(map).map(([name, hex]) => {
+      const [r, g, b] = hexToRgb(hex);
+      return { name, r, g, b };
+    });
+  })();
+
+  function nearestName(r, g, b) {
+    let best = NAMED_COLORS[0], bestD = Infinity;
+    for (const c of NAMED_COLORS) {
+      // Weighted RGB distance — a cheap perceptual approximation.
+      const rm = (c.r + r) / 2;
+      const dr = c.r - r, dg = c.g - g, db = c.b - b;
+      const d = (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best.name;
+  }
+
+  // ==========================================================================
+  //  Subtractive (paint-like) mixing via the RYB model
+  //  so blue + yellow makes green, not gray. (Gossett & Chen RYB→RGB cube.)
+  // ==========================================================================
+  const RYB_CORNERS = {
+    w: [255, 255, 255], // (0,0,0) white
+    b: [ 41,  95, 153], // (0,0,1) blue
+    y: [255, 255,   0], // (0,1,0) yellow
+    g: [  0, 168,  51], // (0,1,1) green
+    r: [255,   0,   0], // (1,0,0) red
+    p: [128,   0, 128], // (1,0,1) purple
+    o: [255, 128,   0], // (1,1,0) orange
+    k: [ 51,  24,   0], // (1,1,1) near-black
+  };
+
+  function rybToRgb(r, y, b) {
+    const s = (t) => t * t * (3 - 2 * t); // smoothstep for softer blends
+    r = s(r); y = s(y); b = s(b);
+    const C = RYB_CORNERS, out = [0, 0, 0];
+    for (let ch = 0; ch < 3; ch++) {
+      const x00 = C.w[ch] + (C.r[ch] - C.w[ch]) * r;
+      const x01 = C.b[ch] + (C.p[ch] - C.b[ch]) * r;
+      const x10 = C.y[ch] + (C.o[ch] - C.y[ch]) * r;
+      const x11 = C.g[ch] + (C.k[ch] - C.g[ch]) * r;
+      const y0 = x00 + (x10 - x00) * y;
+      const y1 = x01 + (x11 - x01) * y;
+      out[ch] = clamp255(y0 + (y1 - y0) * b);
+    }
+    return out;
+  }
+
+  function rgbToRyb(r, g, b) {
+    const w = Math.min(r, g, b);
+    r -= w; g -= w; b -= w;
+    const mg = Math.max(r, g, b);
+    let y = Math.min(r, g);
+    r -= y; g -= y;
+    if (b > 0 && g > 0) { b /= 2; g /= 2; }
+    y += g; b += g;
+    const my = Math.max(r, y, b);
+    if (my > 0) { const n = mg / my; r *= n; y *= n; b *= n; }
+    return [r + w, y + w, b + w];
+  }
+
+  function mixPaints(slots) {
+    let tr = 0, ty = 0, tb = 0, tw = 0;
+    for (const s of slots) {
+      const [r, g, b] = hexToRgb(s.hex);
+      const [R, Y, B] = rgbToRyb(r, g, b);
+      tr += R * s.parts; ty += Y * s.parts; tb += B * s.parts; tw += s.parts;
+    }
+    if (tw === 0) return null;
+    return rybToRgb(tr / tw / 255, ty / tw / 255, tb / tw / 255);
+  }
+
+  // ==========================================================================
+  //  Mixer UI
+  // ==========================================================================
+  const mixerEl = $("mixer");
+
+  function openMixer() {
+    if (state.mix.length === 0) {
+      if (state.lastSample) {
+        state.mix.push({ hex: state.lastSample, parts: 1 });
+      } else if (state.palette.length >= 2) {
+        state.mix.push({ hex: state.palette[0].hex, parts: 1 });
+        state.mix.push({ hex: state.palette[1].hex, parts: 1 });
+      } else {
+        state.mix.push({ hex: "#1f57c3", parts: 1 });
+        state.mix.push({ hex: "#ffd700", parts: 1 });
+      }
+    }
+    renderMix();
+    mixerEl.hidden = false;
+  }
+  function closeMixer() { mixerEl.hidden = true; }
+
+  function addMixColor(hex) {
+    if (state.mix.length >= 6) { showToast("Up to 6 colors"); return; }
+    state.mix.push({ hex, parts: 1 });
+    if (mixerEl.hidden) openMixer(); else renderMix();
+    showToast("Added to mixer");
+  }
+
+  function clearMix() { state.mix = []; renderMix(); }
+
+  function renderMix() {
+    const slotsEl = $("mix-slots");
+    slotsEl.innerHTML = "";
+    state.mix.forEach((s, idx) => {
+      const [r, g, b] = hexToRgb(s.hex);
+      const row = document.createElement("div");
+      row.className = "mix-slot";
+      row.innerHTML =
+        `<button class="mix-chip" style="background:${s.hex}" title="Change color"></button>` +
+        `<input type="color" value="${s.hex}" hidden>` +
+        `<div class="mix-slot-hex">${s.hex.toUpperCase()}<span class="mix-slot-name">${nearestName(r, g, b)}</span></div>` +
+        `<div class="mix-parts"><button data-dec aria-label="Fewer parts">−</button>` +
+          `<span>${s.parts}</span><button data-inc aria-label="More parts">+</button></div>` +
+        `<button class="mix-remove" aria-label="Remove color">✕</button>`;
+      const colorInput = row.querySelector('input[type="color"]');
+      row.querySelector(".mix-chip").addEventListener("click", () => colorInput.click());
+      colorInput.addEventListener("input", () => { state.mix[idx].hex = colorInput.value; renderMix(); });
+      row.querySelector("[data-dec]").addEventListener("click", () => { s.parts = Math.max(1, s.parts - 1); renderMix(); });
+      row.querySelector("[data-inc]").addEventListener("click", () => { s.parts = Math.min(9, s.parts + 1); renderMix(); });
+      row.querySelector(".mix-remove").addEventListener("click", () => { state.mix.splice(idx, 1); renderMix(); });
+      slotsEl.appendChild(row);
+    });
+    updateMixResult();
+  }
+
+  function updateMixResult() {
+    const rgb = mixPaints(state.mix);
+    const swatch = $("mix-swatch"), nameEl = $("mix-name"), hexEl = $("mix-hex"), rgbEl = $("mix-rgb"), copyBtn = $("mix-copy");
+    if (!rgb) {
+      swatch.style.background = "var(--paper-2)";
+      nameEl.textContent = "Add colors to mix";
+      hexEl.textContent = "—";
+      rgbEl.textContent = "rgb(—)";
+      copyBtn.disabled = true;
+      return;
+    }
+    const [r, g, b] = rgb;
+    const hex = rgbToHex(r, g, b).toUpperCase();
+    swatch.style.background = hex;
+    nameEl.textContent = nearestName(r, g, b);
+    hexEl.textContent = hex;
+    rgbEl.textContent = `rgb(${r}, ${g}, ${b})`;
+    copyBtn.disabled = false;
+    copyBtn.onclick = () => { copyText(hex); showToast(`Copied ${hex}`); };
+  }
+
+  function populateMixSource() {
+    const wrap = $("mix-source"), chips = $("mix-source-chips");
+    if (!state.palette.length) { wrap.hidden = true; return; }
+    chips.innerHTML = "";
+    state.palette.forEach((c, i) => {
+      const chip = document.createElement("button");
+      chip.className = "mix-source-chip";
+      chip.style.background = c.hex;
+      chip.title = `Add ${c.hex.toUpperCase()} to mix`;
+      chip.innerHTML = `<span style="color:${contrastInk(c.r, c.g, c.b)}">${i + 1}</span>`;
+      chip.addEventListener("click", () => addMixColor(c.hex));
+      chips.appendChild(chip);
+    });
+    wrap.hidden = false;
   }
 
   // ==========================================================================
@@ -501,15 +714,26 @@
 
   colorCount.addEventListener("change", () => {
     showScreen("processing");
-    requestAnimationFrame(() => setTimeout(() => {
+    setTimeout(() => {
       rebuildPalette(parseInt(colorCount.value, 10));
       buildPaletteUI();
       setView(state.view);
       showScreen("result");
-    }, 30));
+    }, 30);
   });
 
   $("download-btn").addEventListener("click", downloadCurrent);
   $("print-btn").addEventListener("click", printGuide);
   $("reset-btn").addEventListener("click", reset);
+
+  // Mixer
+  $("open-mixer").addEventListener("click", openMixer);
+  $("nav-home").addEventListener("click", (e) => { e.preventDefault(); if (!mixerEl.hidden) closeMixer(); });
+  mixerEl.querySelectorAll("[data-close]").forEach((el) => el.addEventListener("click", closeMixer));
+  $("mix-add").addEventListener("click", () => {
+    const hex = state.lastSample || (state.palette[0] && state.palette[0].hex) || "#7f7f7f";
+    addMixColor(hex);
+  });
+  $("mix-clear").addEventListener("click", clearMix);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !mixerEl.hidden) closeMixer(); });
 })();
