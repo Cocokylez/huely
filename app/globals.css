@@ -1,0 +1,28 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f4efe6;
+  --paper-2: #ece4d6;
+  --foreground: #2b2723;
+  --accent: #c65d3b;
+}
+
+@theme inline {
+  --color-background: var(--paper);
+  --color-foreground: var(--foreground);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #201d1a;
+    --paper-2: #2a2622;
+    --foreground: #f0e9dd;
+    --accent: #e07a55;
+  }
+}
+
+body {
+  background: var(--paper);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

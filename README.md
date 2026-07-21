@@ -1,53 +1,52 @@
 # 🎨 Huely
 
-Turn a photo into colors you can **paint by hand**.
+Turn a photo into colors you can **paint by hand** — an oil-paint reference, the exact palette, a paint-by-numbers guide, and a paint-accurate color mixer. v2 is a Next.js app with accounts and saved history.
 
-Huely is a small, privacy-friendly web app. Upload a photo and it gives you:
+> Huely is a **reference tool** for painting on a real canvas — there's no in-app drawing.
 
-- **An oil-paint version** of your image — a softer, painterly reference to work from.
-- **Your exact palette** — the dominant colors as swatches with copyable **HEX** and **RGB** values, so you can mix or match them with real paint.
-- **A paint-by-numbers guide** — the image reduced to flat numbered color zones so you know *where* each color goes.
-- **An eyedropper** — tap anywhere on the image to grab that pixel's exact color.
-- **Download / print** the guide to keep beside you while you paint.
+## Features
 
-> Huely is a **reference tool**, not a digital painting app. You do the painting for real, on a real canvas — Huely just shows you the colors and where they go.
+- **Oil-paint render** of your photo, plus **Original** and **Paint-by-numbers** views.
+- **Palette extraction** — dominant colors as numbered swatches with copyable HEX/RGB.
+- **Color Mixer** — blends like real pigment (RYB subtractive model, so blue + yellow → green) and **names any shade**.
+- **Eyedropper** — tap the image to grab any pixel's exact color.
+- **History** — save palettes; kept locally for guests, synced to your account when signed in.
+- All image processing runs **client-side in a Web Worker** — photos never leave your device.
 
-## How it works
+## Stack
 
-Everything runs **client-side in your browser** using the Canvas API — your photo never leaves your device, and there's no server or account.
-
-- Oil-paint effect: an intensity-histogram "oil painting" filter.
-- Palette: median-cut color quantization.
-- Paint-by-numbers: nearest-color mapping + region outlines + connected-component numbering.
+Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Supabase (auth + Postgres).
 
 ## Run locally
 
-It's a static site — no build step, no dependencies. Just open `index.html` in a browser, or serve the folder:
-
 ```bash
-# any static server works, e.g.
-python -m http.server 8000
-# then visit http://localhost:8000
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-## Deploy
+Runs in **guest mode** with local history and no accounts if Supabase isn't configured.
 
-Static hosting anywhere. This project is set up to deploy on **Vercel**:
+## Enable accounts + cloud history (Supabase)
 
-1. Push this repo to GitHub.
-2. On [vercel.com](https://vercel.com) → **New Project** → import the repo → **Deploy** (no configuration needed).
-3. Every push to the default branch auto-deploys.
+1. Create a Supabase project.
+2. Copy `.env.example` → `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+3. Run [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL editor (creates the `projects` table with row-level security).
+4. Restart `npm run dev`. Add the same two env vars in your Vercel project settings for production.
+
+Auth is email + password with a display name (Google / magic-link can be added later).
 
 ## Project structure
 
 ```
-huely/
-├── index.html   # markup
-├── styles.css   # minimal warm-paper theme
-├── app.js       # image pipeline (oil paint, palette, paint-by-numbers, eyedropper)
-└── README.md
+app/            layout, studio (page), history, login, signup, auth/actions
+components/      Navbar, AccountMenu, studio/*, mixer/*, history/*, ui/*
+lib/image/      oil paint, quantize, paint-by-numbers, mixer (RYB), color naming
+lib/worker/     pipeline.worker.ts (heavy work off the main thread)
+lib/history/    local (IndexedDB) + cloud (Supabase) stores
+lib/supabase/   browser + server clients
+proxy.ts        Supabase session refresh (Next 16's renamed middleware)
 ```
 
-## License
+## Deploy
 
-MIT — do whatever you like.
+Push to GitHub; Vercel auto-deploys (add the Supabase env vars in project settings).
