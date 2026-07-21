@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { signIn } from "@/app/auth/actions";
+import { signIn, resendConfirmation } from "@/app/auth/actions";
 
 const input =
   "w-full rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2.5 text-[15px] text-[var(--ink)] outline-none focus:border-[var(--accent)]";
@@ -7,9 +7,10 @@ const input =
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; email?: string; sent?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, email, sent } = await searchParams;
+  const unconfirmed = !!error && /confirm/i.test(error);
 
   return (
     <div className="mx-auto max-w-sm py-8">
@@ -23,19 +24,51 @@ export default async function LoginPage({
         Log in to keep your palettes on every device.
       </p>
 
+      {sent && (
+        <p className="mt-4 rounded-xl border border-[var(--accent-2)] px-3.5 py-2.5 text-[13px] text-[var(--ink)]"
+          style={{ background: "color-mix(in srgb, var(--accent-2) 8%, var(--card))" }}
+        >
+          Confirmation email sent to <b>{sent}</b>. Click the link, then log in.
+        </p>
+      )}
+
       {error && (
-        <p
+        <div
           className="mt-4 rounded-xl border border-[var(--accent)] px-3.5 py-2.5 text-[13px] text-[var(--ink)]"
           style={{ background: "color-mix(in srgb, var(--accent) 6%, var(--card))" }}
         >
-          {error}
-        </p>
+          {unconfirmed ? (
+            <>
+              <b>Email not confirmed.</b> Check your inbox for the confirmation link.
+              {email && (
+                <form action={resendConfirmation} className="mt-2">
+                  <input type="hidden" name="email" value={email} />
+                  <button
+                    type="submit"
+                    className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)]"
+                  >
+                    Resend confirmation email
+                  </button>
+                </form>
+              )}
+            </>
+          ) : (
+            error
+          )}
+        </div>
       )}
 
       <form action={signIn} className="mt-5 flex flex-col gap-3">
         <label className="flex flex-col gap-1 text-[13px] font-semibold">
           Email
-          <input type="email" name="email" required autoComplete="email" className={input} />
+          <input
+            type="email"
+            name="email"
+            required
+            autoComplete="email"
+            defaultValue={email}
+            className={input}
+          />
         </label>
         <label className="flex flex-col gap-1 text-[13px] font-semibold">
           Password

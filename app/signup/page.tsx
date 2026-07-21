@@ -7,9 +7,31 @@ const input =
 export default async function SignupPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; pending?: string }>;
 }) {
-  const { error } = await searchParams;
+  const { error, pending } = await searchParams;
+
+  if (pending) {
+    return (
+      <div className="mx-auto max-w-sm py-10 text-center">
+        <div className="text-4xl">📬</div>
+        <h1 className="mt-3 text-[22px] font-extrabold tracking-[-0.02em]">Check your email</h1>
+        <p className="mx-auto mt-2 max-w-[32ch] text-[14px] text-[var(--ink-soft)]">
+          We sent a confirmation link to <b className="text-[var(--ink)]">{pending}</b>. Click it,
+          then log in.
+        </p>
+        <Link
+          href="/login"
+          className="mt-5 inline-block rounded-xl bg-[var(--accent)] px-5 py-3 text-[14px] font-semibold text-white"
+        >
+          Go to log in
+        </Link>
+        <p className="mt-4 text-[12px] text-[var(--ink-soft)]">
+          No email? It can take a minute, or check spam.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-sm py-8">
@@ -19,9 +41,7 @@ export default async function SignupPage({
         aria-hidden
       />
       <h1 className="mt-3 text-[26px] font-extrabold tracking-[-0.02em]">Create your account</h1>
-      <p className="mt-1 text-[13px] text-[var(--ink-soft)]">
-        Keep your palettes on every device.
-      </p>
+      <p className="mt-1 text-[13px] text-[var(--ink-soft)]">Keep your palettes on every device.</p>
 
       {error && (
         <p
