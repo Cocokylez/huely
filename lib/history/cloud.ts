@@ -41,6 +41,7 @@ export async function cloudSave(project: HistoryProject): Promise<void> {
   if (!user) throw new Error("Not signed in");
 
   const { error } = await supabase.from("projects").insert({
+    id: project.id,
     user_id: user.id,
     name: project.name,
     color_count: project.colorCount,
@@ -48,6 +49,28 @@ export async function cloudSave(project: HistoryProject): Promise<void> {
     mixer: project.mixer,
     thumb: project.thumbDataUrl,
   });
+  if (error) throw error;
+}
+
+export async function cloudGet(id: string): Promise<HistoryProject | undefined> {
+  const supabase = createClient();
+  const { data, error } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
+  if (error) throw error;
+  return data ? rowToProject(data as ProjectRow) : undefined;
+}
+
+export async function cloudUpdate(project: HistoryProject): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("projects")
+    .update({
+      name: project.name,
+      color_count: project.colorCount,
+      palette: project.palette,
+      mixer: project.mixer,
+      thumb: project.thumbDataUrl,
+    })
+    .eq("id", project.id);
   if (error) throw error;
 }
 

@@ -1,91 +1,144 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useHistory } from "@/lib/hooks/useHistory";
-import { useToast } from "@/components/ui/ToastProvider";
 
+/** History — "My projects" (spec 03 · History). */
 export function HistoryGrid({ authed }: { authed: boolean }) {
   const { items, loading, error, remove, rename } = useHistory(authed);
-  const { toast } = useToast();
-
-  if (loading) return <p className="py-12 text-center text-neutral-500">Loading…</p>;
-  if (error) return <p className="py-12 text-center text-red-600">{error}</p>;
-
-  if (items.length === 0) {
-    return (
-      <div className="rounded-2xl border border-neutral-200 bg-white/60 p-8 text-center">
-        <p className="font-semibold">No saved palettes yet</p>
-        <p className="mt-1 text-sm text-neutral-500">
-          {authed
-            ? "Save a palette from the studio and it'll show up here."
-            : "Saved palettes are kept on this device. Log in to sync them across devices."}
-        </p>
-        <Link
-          href="/"
-          className="mt-4 inline-block rounded-xl bg-[var(--accent,#c65d3b)] px-4 py-2.5 text-sm font-semibold text-white"
-        >
-          Open the studio
-        </Link>
-      </div>
-    );
-  }
+  const router = useRouter();
+  const [menuFor, setMenuFor] = useState<string | null>(null);
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {items.map((p) => (
-        <div
-          key={p.id}
-          className="flex flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white/70 shadow-sm"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={p.thumbDataUrl} alt={p.name} className="aspect-[4/3] w-full object-cover" />
-          <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold">{p.name}</div>
-              <div className="text-xs text-neutral-400">
-                {new Date(p.createdAt).toLocaleDateString()}
-              </div>
+    <div>
+      <h1 className="text-[28px] font-extrabold tracking-[-0.02em]">My projects</h1>
+      <p className="mb-5 mt-1 text-[13px] text-[var(--ink-soft)]">
+        {authed ? "Synced to your account" : "Saved on this device"}
+        {!loading && ` · ${items.length} project${items.length === 1 ? "" : "s"}`}
+      </p>
+
+      {loading ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="h-[130px] rounded-xl bg-[var(--paper-2)]">
+              <div className="shimmer h-full w-full rounded-xl" />
             </div>
-            <div className="flex flex-none gap-1">
-              <button
-                aria-label="Rename"
-                title="Rename"
-                onClick={() => {
-                  const name = window.prompt("Rename palette", p.name);
-                  if (name && name.trim()) rename(p.id, name.trim());
-                }}
-                className="rounded-full border border-neutral-300 px-2 py-1 text-xs hover:border-neutral-500"
-              >
-                ✎
-              </button>
-              <button
-                aria-label="Delete"
-                title="Delete"
-                onClick={() => {
-                  if (window.confirm("Delete this palette?")) remove(p.id);
-                }}
-                className="rounded-full border border-neutral-300 px-2 py-1 text-xs hover:border-red-400 hover:text-red-600"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-1.5 p-3">
-            {p.palette.map((c, i) => (
-              <button
-                key={`${c.hex}-${i}`}
-                title={`Copy ${c.hex.toUpperCase()}`}
-                onClick={() => {
-                  navigator.clipboard?.writeText(c.hex.toUpperCase());
-                  toast(`Copied ${c.hex.toUpperCase()}`);
-                }}
-                className="h-6 w-6 rounded-md border border-black/10"
-                style={{ background: c.hex }}
-              />
-            ))}
-          </div>
+          ))}
         </div>
-      ))}
+      ) : error ? (
+        <div
+          className="flex items-center gap-3 rounded-xl border border-[var(--accent)] p-3 text-[13px]"
+          style={{ background: "color-mix(in srgb, var(--accent) 6%, var(--card))" }}
+        >
+          <span className="text-[var(--ink-soft)]">
+            <b className="text-[var(--ink)]">{error}</b> · Reload to retry
+          </span>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          {items.map((p) => (
+            <div
+              key={p.id}
+              className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow-sm)]"
+            >
+              <button
+                onClick={() => router.push(`/?open=${p.id}`)}
+                className="block w-full text-left"
+                title={`Open ${p.name}`}
+              >
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.thumbDataUrl} alt={p.name} className="aspect-[4/3] w-full object-cover" />
+                  <span className="absolute right-1.5 top-1.5 flex gap-0.5">
+                    {p.palette.slice(0, 4).map((c, i) => (
+                      <span
+                        key={i}
+                        className="h-3 w-1 rounded-sm"
+                        style={{ background: c.hex }}
+                      />
+                    ))}
+                  </span>
+                </div>
+                <div className="px-2.5 pb-2 pt-1.5">
+                  <b className="block truncate text-[13px]">{p.name}</b>
+                  <span className="text-[11px] text-[var(--ink-soft)]">
+                    {new Date(p.createdAt).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    · {p.palette.length} colors
+                  </span>
+                </div>
+              </button>
+
+              <button
+                aria-label="Project menu"
+                onClick={() => setMenuFor(menuFor === p.id ? null : p.id)}
+                className="absolute bottom-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[13px] text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              >
+                ⋯
+              </button>
+
+              {menuFor === p.id && (
+                <div className="absolute bottom-9 right-1.5 z-10 w-[110px] rounded-[10px] border border-[var(--line)] bg-[var(--card-2)] p-1 shadow-[var(--shadow)]">
+                  <button
+                    onClick={() => router.push(`/?open=${p.id}`)}
+                    className="block w-full rounded-md px-2.5 py-1.5 text-left text-[12px] font-semibold hover:bg-[var(--paper-2)]"
+                  >
+                    Open
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuFor(null);
+                      const next = window.prompt("Rename project", p.name);
+                      if (next && next.trim()) rename(p.id, next.trim());
+                    }}
+                    className="block w-full rounded-md px-2.5 py-1.5 text-left text-[12px] font-semibold hover:bg-[var(--paper-2)]"
+                  >
+                    Rename
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuFor(null);
+                      if (window.confirm(`Delete "${p.name}"?`)) remove(p.id);
+                    }}
+                    className="block w-full rounded-md px-2.5 py-1.5 text-left text-[12px] font-semibold text-[var(--accent)] hover:bg-[var(--paper-2)]"
+                  >
+                    Delete…
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+
+          <Link
+            href="/"
+            className="grid min-h-[130px] place-items-center rounded-xl border-2 border-dashed border-[var(--line)] text-center text-[13px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <span>
+              ＋<br />
+              New photo
+            </span>
+          </Link>
+        </div>
+      )}
+
+      <div className="mt-5 rounded-[10px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3 text-[12px] leading-relaxed text-[var(--ink-soft)]">
+        <b className="text-[var(--ink)]">Private by default.</b>{" "}
+        {authed ? (
+          <>Your projects sync to your account — palettes and thumbnails only, never photos.</>
+        ) : (
+          <>
+            Projects live in this browser.{" "}
+            <Link href="/login" className="font-semibold text-[var(--accent)]">
+              Log in
+            </Link>{" "}
+            to sync across devices — palettes + thumbnails only, never photos.
+          </>
+        )}
+      </div>
     </div>
   );
 }

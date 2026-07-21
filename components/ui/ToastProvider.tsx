@@ -32,7 +32,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       <div
         role="status"
         aria-live="polite"
-        className={`pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 rounded-full bg-neutral-900 px-4 py-2 text-sm text-white shadow-lg transition-all duration-200 ${
+        className={`pointer-events-none fixed left-1/2 z-50 -translate-x-1/2 rounded-full bg-[var(--ink)] px-4 py-2 text-[13px] text-[var(--paper)] shadow-[var(--shadow)] transition-all duration-200 ${
           visible ? "bottom-6 opacity-100" : "bottom-3 opacity-0"
         }`}
       >

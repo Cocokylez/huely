@@ -1,5 +1,5 @@
-/** Downscale an ImageData layer into a small WEBP data URL for history thumbnails. */
-export function imageDataToThumb(imageData: ImageData, max = 260): string {
+/** Downscale an ImageData layer into a small JPEG data URL for history thumbnails (spec: 320px). */
+export function imageDataToThumb(imageData: ImageData, max = 320): string {
   const scale = Math.min(1, max / Math.max(imageData.width, imageData.height));
   const w = Math.max(1, Math.round(imageData.width * scale));
   const h = Math.max(1, Math.round(imageData.height * scale));
@@ -14,5 +14,5 @@ export function imageDataToThumb(imageData: ImageData, max = 260): string {
   dst.height = h;
   dst.getContext("2d")!.drawImage(src, 0, 0, w, h);
 
-  return dst.toDataURL("image/webp", 0.7);
+  return dst.toDataURL("image/jpeg", 0.75);
 }

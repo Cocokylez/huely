@@ -34,6 +34,11 @@ export async function localSave(project: HistoryProject): Promise<void> {
   await db.put("projects", project);
 }
 
+export async function localGet(id: string): Promise<HistoryProject | undefined> {
+  const db = await getDb();
+  return db.get("projects", id);
+}
+
 export async function localRemove(id: string): Promise<void> {
   const db = await getDb();
   await db.delete("projects", id);

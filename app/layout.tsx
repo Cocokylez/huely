@@ -12,6 +12,9 @@ export const metadata: Metadata = {
     "Turn a photo into an oil-paint reference and the exact colors to mix by hand, plus a paint-by-numbers guide and a color mixer.",
 };
 
+// Applies the saved theme before first paint so there's no flash (spec 01).
+const THEME_INIT = `try{var t=localStorage.getItem("huely-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}`;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -21,15 +24,19 @@ export default async function RootLayout({
   const navUser = user ? { email: user.email, displayName: user.displayName } : null;
 
   return (
-    <html lang="en" className="h-full antialiased">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body className="flex min-h-full flex-col">
         <ToastProvider>
           <MixerProvider>
             <Navbar user={navUser} />
-            <main className="mx-auto w-full max-w-xl flex-1 px-5 py-6">{children}</main>
+            <main className="mx-auto w-full max-w-xl flex-1 px-5 pb-10 pt-6">{children}</main>
             <Mixer />
           </MixerProvider>
         </ToastProvider>
+        <div id="print-area" className="print-area" aria-hidden="true" />
       </body>
     </html>
   );

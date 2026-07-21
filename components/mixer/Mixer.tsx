@@ -2,10 +2,15 @@
 
 import { useEffect } from "react";
 import { useMixer } from "./MixerProvider";
+import { useMixSource } from "./mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
 import { nearestName } from "@/lib/image/colorNames";
 import { hexToRgb } from "@/lib/image/color";
 
+/**
+ * Color Mixer — bottom sheet on mobile, 380px right side panel on ≥900px
+ * (spec 02 · Toast & sheet; spec 03 · Mixer).
+ */
 export function Mixer() {
   const { slots, open, result, closeMixer, removeSlot, setHex, setParts, addColor, clear } =
     useMixer();
@@ -28,45 +33,59 @@ export function Mixer() {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
-      <div className="absolute inset-0 bg-black/50" onClick={closeMixer} aria-hidden />
+    <div className="fixed inset-0 z-40 flex items-end justify-center min-[900px]:items-stretch min-[900px]:justify-end">
+      <div
+        className="absolute inset-0 bg-[rgba(30,22,14,0.45)]"
+        style={{ animation: "fade 0.2s ease" }}
+        onClick={closeMixer}
+        aria-hidden
+      />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Color mixer"
-        className="relative flex max-h-[90dvh] w-full max-w-xl flex-col gap-4 overflow-y-auto rounded-t-3xl bg-[var(--paper)] p-5 pb-8 shadow-2xl sm:rounded-3xl"
+        className="relative flex max-h-[90dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-[22px] bg-[var(--paper)] p-5 pb-8 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] min-[900px]:m-0 min-[900px]:max-h-none min-[900px]:w-[380px] min-[900px]:rounded-none min-[900px]:border-l min-[900px]:border-[var(--line)] min-[900px]:pb-5"
+        style={{ animation: "sheet-up 0.28s cubic-bezier(0.2,0.8,0.2,1)" }}
       >
+        <div className="mx-auto h-1 w-9 rounded-full bg-[var(--line)] min-[900px]:hidden" aria-hidden />
+
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-bold">Color Mixer</h2>
-            <p className="text-sm text-neutral-500">Blend colors like paint, and name any shade.</p>
+            <h2 className="text-[21px] font-bold tracking-tight">Color Mixer</h2>
+            <p className="text-[13px] text-[var(--ink-soft)]">
+              Blend like real pigment. Name any shade.
+            </p>
           </div>
           <button
             onClick={closeMixer}
             aria-label="Close"
-            className="h-9 w-9 rounded-full border border-neutral-300 text-neutral-600 hover:border-neutral-500"
+            className="grid h-[34px] w-[34px] place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95"
           >
             ✕
           </button>
         </div>
 
         {/* Result */}
-        <div className="flex items-center gap-4 rounded-2xl border border-neutral-200 bg-white/60 p-4">
+        <div className="flex items-center gap-3.5 rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5">
           <div
-            className="h-16 w-16 flex-none rounded-xl border border-black/10"
-            style={{ background: result?.hex ?? "var(--paper-2, #ece4d6)" }}
+            className="h-[62px] w-[62px] flex-none rounded-xl border border-black/10"
+            style={{
+              background: result?.hex ?? "var(--paper-2)",
+              boxShadow: "inset 0 0 0 3px rgba(255,255,255,0.25)",
+            }}
           />
           <div className="min-w-0 flex-1">
-            <div className="font-semibold">{result?.name ?? "Add colors to mix"}</div>
-            <div className="font-mono text-sm text-neutral-500">{result?.hex ?? "—"}</div>
-            <div className="text-xs text-neutral-500">
-              {result ? `rgb(${result.rgb[0]}, ${result.rgb[1]}, ${result.rgb[2]})` : "rgb(—)"}
+            <div className="text-[15px] font-bold">{result?.name ?? "Add colors to mix"}</div>
+            <div className="text-[13px] text-[var(--ink-soft)]" style={{ fontFamily: "var(--mono)" }}>
+              {result
+                ? `${result.hex} · rgb(${result.rgb[0]}, ${result.rgb[1]}, ${result.rgb[2]})`
+                : "—"}
             </div>
           </div>
           <button
             onClick={copyResult}
             disabled={!result}
-            className="rounded-full border border-neutral-300 px-3 py-2 text-sm font-semibold disabled:opacity-40"
+            className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95 disabled:opacity-45"
           >
             Copy
           </button>
@@ -79,11 +98,11 @@ export function Mixer() {
             return (
               <div
                 key={i}
-                className="flex items-center gap-3 rounded-xl border border-neutral-200 bg-white/60 p-2.5"
+                className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--card)] p-2.5"
               >
                 <label className="relative h-10 w-10 flex-none cursor-pointer">
                   <span
-                    className="block h-full w-full rounded-lg border border-black/10"
+                    className="block h-full w-full rounded-[10px] border border-black/10"
                     style={{ background: s.hex }}
                   />
                   <input
@@ -91,33 +110,36 @@ export function Mixer() {
                     value={s.hex}
                     onChange={(e) => setHex(i, e.target.value)}
                     className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label="Change color"
                   />
                 </label>
-                <div className="min-w-0 flex-1">
-                  <div className="font-mono text-sm">{s.hex.toUpperCase()}</div>
-                  <div className="text-xs text-neutral-500">{nearestName(r, g, b)}</div>
+                <div className="min-w-0 flex-1 leading-tight">
+                  <div className="text-[13px]" style={{ fontFamily: "var(--mono)" }}>
+                    {s.hex.toUpperCase()}
+                  </div>
+                  <div className="text-[12px] text-[var(--ink-soft)]">{nearestName(r, g, b)}</div>
                 </div>
-                <div className="flex items-center gap-1 rounded-full bg-neutral-100 p-1">
+                <div className="flex items-center gap-0.5 rounded-full bg-[var(--paper-2)] p-1">
                   <button
                     onClick={() => setParts(i, s.parts - 1)}
                     aria-label="Fewer parts"
-                    className="h-6 w-6 rounded-full text-lg leading-none hover:bg-white"
+                    className="grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold hover:bg-[var(--card-2)] hover:text-[var(--accent)]"
                   >
                     −
                   </button>
-                  <span className="w-5 text-center text-sm font-bold">{s.parts}</span>
+                  <span className="min-w-5 text-center text-[13px] font-bold">{s.parts}</span>
                   <button
                     onClick={() => setParts(i, s.parts + 1)}
                     aria-label="More parts"
-                    className="h-6 w-6 rounded-full text-lg leading-none hover:bg-white"
+                    className="grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold hover:bg-[var(--card-2)] hover:text-[var(--accent)]"
                   >
-                    +
+                    ＋
                   </button>
                 </div>
                 <button
                   onClick={() => removeSlot(i)}
                   aria-label="Remove color"
-                  className="h-6 w-6 flex-none rounded-full text-neutral-500 hover:text-neutral-800"
+                  className="grid h-7 w-7 flex-none place-items-center rounded-full text-[13px] text-[var(--ink-soft)] hover:text-[var(--accent)]"
                 >
                   ✕
                 </button>
@@ -129,22 +151,49 @@ export function Mixer() {
         <div className="flex gap-2">
           <button
             onClick={() => addColor(slots[0]?.hex ?? "#7f7f7f")}
-            className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-sm font-semibold hover:border-neutral-500"
+            className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.98]"
           >
             + Add a color
           </button>
           <button
             onClick={clear}
-            className="flex-1 rounded-xl border border-neutral-300 px-4 py-3 text-sm font-semibold hover:border-neutral-500"
+            className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.98]"
           >
             Clear
           </button>
         </div>
 
-        <p className="text-xs leading-relaxed text-neutral-500">
-          Mixing is subtractive, like real pigment — blue + yellow makes green. Use − / + to change
+        <MixSourceChips />
+
+        <p className="text-[12px] leading-relaxed text-[var(--ink-soft)]">
+          Mixing is subtractive, like real pigment — blue + yellow makes green. Use − / ＋ to change
           how many parts of each color go in.
         </p>
+      </div>
+    </div>
+  );
+}
+
+/** "From your palette" chips — fed by the studio via the mixSource store. */
+function MixSourceChips() {
+  const { addColor } = useMixer();
+  const palette = useMixSource();
+  if (!palette.length) return null;
+  return (
+    <div>
+      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-soft)]">
+        From your palette
+      </p>
+      <div className="flex flex-wrap gap-2">
+        {palette.map((c, i) => (
+          <button
+            key={`${c.hex}-${i}`}
+            onClick={() => addColor(c.hex)}
+            title={`Add ${c.hex.toUpperCase()} to mix`}
+            className="h-[30px] w-[30px] rounded-lg border border-[var(--line)] transition hover:scale-110"
+            style={{ background: c.hex }}
+          />
+        ))}
       </div>
     </div>
   );

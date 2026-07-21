@@ -4,11 +4,11 @@ import { signOut } from "@/app/auth/actions";
 
 export function AccountMenu({ name }: { name: string }) {
   return (
-    <form action={signOut} className="flex items-center gap-2">
-      <span className="hidden max-w-[10ch] truncate text-sm font-semibold sm:inline">{name}</span>
+    <form action={signOut} className="flex items-center">
       <button
         type="submit"
-        className="rounded-full border border-neutral-300 bg-white/70 px-3.5 py-2 text-sm font-semibold text-neutral-800 hover:border-neutral-500"
+        title={`Signed in as ${name}`}
+        className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] active:scale-95"
       >
         Log out
       </button>
