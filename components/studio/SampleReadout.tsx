@@ -10,9 +10,14 @@ const chip =
 
 /** Eyedropper readout (spec 03 · Result). */
 export function SampleReadout({ hex }: { hex: string }) {
-  const { addColor } = useMixer();
+  const { addColor, setTarget, openMixer } = useMixer();
   const { toast } = useToast();
   const [r, g, b] = hexToRgb(hex);
+
+  const openRecipe = () => {
+    setTarget(hex);
+    openMixer();
+  };
 
   return (
     <div className="mt-3 flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--card)] p-2.5">
@@ -29,6 +34,9 @@ export function SampleReadout({ hex }: { hex: string }) {
         </small>
       </div>
       <div className="flex flex-none gap-1.5">
+        <button onClick={openRecipe} className={chip} title="What paints make this color?">
+          Recipe
+        </button>
         <button onClick={() => addColor(hex)} className={chip}>
           + Mixer
         </button>

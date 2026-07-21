@@ -36,6 +36,11 @@ export function rybToRgb(r: number, y: number, b: number): [number, number, numb
 }
 
 export function rgbToRyb(r: number, g: number, b: number): [number, number, number] {
+  // Blackness (not whiteness) is what maps onto RYB pigment amount: in the
+  // subtractive cube (0,0,0)=white paper and (1,1,1)=black, so white pigment
+  // must land at RYB(0,0,0). Re-adding whiteness here (a common porting
+  // mistake) makes white mix like black.
+  const bk = 255 - Math.max(r, g, b);
   const w = Math.min(r, g, b);
   r -= w;
   g -= w;
@@ -57,7 +62,7 @@ export function rgbToRyb(r: number, g: number, b: number): [number, number, numb
     y *= n;
     b *= n;
   }
-  return [r + w, y + w, b + w];
+  return [r + bk, y + bk, b + bk];
 }
 
 /** Weighted subtractive mix of paint slots. Returns null if there is nothing to mix. */

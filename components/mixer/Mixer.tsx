@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMixer } from "./MixerProvider";
 import { useMixSource } from "./mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
 import { nearestName } from "@/lib/image/colorNames";
-import { hexToRgb } from "@/lib/image/color";
+import { hexToRgb, rgbToHex } from "@/lib/image/color";
+import { parseColorInput, solveRecipe } from "@/lib/image/recipes";
 
 /**
  * Color Mixer — bottom sheet on mobile, 380px right side panel on ≥900px
@@ -64,6 +65,8 @@ export function Mixer() {
             ✕
           </button>
         </div>
+
+        <MatchColor />
 
         {/* Result */}
         <div className="flex items-center gap-3.5 rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5">
@@ -170,6 +173,123 @@ export function Mixer() {
           how many parts of each color go in.
         </p>
       </div>
+    </div>
+  );
+}
+
+const QUALITY_COPY = {
+  "spot-on": "Spot on — this mix hits your color.",
+  close: "Close match — tweak parts to taste.",
+  closest: "Closest possible mix from a basic paint set.",
+} as const;
+
+/** "Match a color" — paste any color, get the paint recipe to mix it. */
+function MatchColor() {
+  const { target, setTarget, loadSlots } = useMixer();
+  const { toast } = useToast();
+  const [raw, setRaw] = useState("");
+
+  // A target pushed from outside (eyedropper "Recipe" button) fills the field.
+  useEffect(() => {
+    if (target) setRaw(target);
+  }, [target]);
+
+  const parsed = useMemo(() => parseColorInput(raw), [raw]);
+  const recipe = useMemo(() => (parsed ? solveRecipe(parsed) : null), [parsed]);
+  const targetHex = parsed ? rgbToHex(parsed[0], parsed[1], parsed[2]).toUpperCase() : null;
+
+  const useMix = () => {
+    if (!recipe) return;
+    loadSlots(recipe.parts.map((p) => ({ hex: p.paint.hex, parts: p.parts })));
+    toast("Recipe loaded into the mixer");
+  };
+
+  return (
+    <div className="rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5">
+      <p className="mb-0.5 text-[15px] font-bold">Match a color</p>
+      <p className="mb-2.5 text-[12px] text-[var(--ink-soft)]">
+        Paste a color to find out what paints to mix.
+      </p>
+
+      <div className="flex items-center gap-2">
+        <input
+          value={raw}
+          onChange={(e) => {
+            setRaw(e.target.value);
+            if (!e.target.value) setTarget(null);
+          }}
+          placeholder="#5A7A52 or rgb(90, 122, 82)"
+          spellCheck={false}
+          className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2.5 text-[14px] text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+          style={{ fontFamily: "var(--mono)" }}
+          aria-label="Target color"
+        />
+        <label
+          className="relative h-[42px] w-[42px] flex-none cursor-pointer rounded-xl border border-[var(--line)]"
+          style={{ background: targetHex ?? "var(--paper-2)" }}
+          title="Pick a color"
+        >
+          <input
+            type="color"
+            value={targetHex ?? "#808080"}
+            onChange={(e) => setRaw(e.target.value.toUpperCase())}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            aria-label="Pick target color"
+          />
+        </label>
+      </div>
+
+      {raw && !parsed && (
+        <p className="mt-2 text-[12px] text-[var(--accent)]">
+          That doesn&apos;t look like a color — try #RRGGBB.
+        </p>
+      )}
+
+      {recipe && targetHex && (
+        <div className="mt-3">
+          <div className="flex items-center gap-3">
+            <div className="flex flex-none flex-col items-center gap-1">
+              <span
+                className="h-[46px] w-[46px] rounded-[10px] border border-black/10"
+                style={{ background: targetHex }}
+              />
+              <span className="text-[10px] text-[var(--ink-soft)]">target</span>
+            </div>
+            <span className="text-[15px] text-[var(--ink-soft)]" aria-hidden>
+              →
+            </span>
+            <div className="flex flex-none flex-col items-center gap-1">
+              <span
+                className="h-[46px] w-[46px] rounded-[10px] border border-black/10"
+                style={{ background: recipe.hex }}
+              />
+              <span className="text-[10px] text-[var(--ink-soft)]">your mix</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              {recipe.parts.map((p) => (
+                <div key={p.paint.name} className="flex items-center gap-2 py-0.5">
+                  <span
+                    className="h-4 w-4 flex-none rounded border border-black/10"
+                    style={{ background: p.paint.hex }}
+                  />
+                  <span className="truncate text-[13px]">
+                    <b>{p.parts}</b> × {p.paint.name}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-2.5 flex items-center justify-between gap-2">
+            <span className="text-[12px] text-[var(--ink-soft)]">{QUALITY_COPY[recipe.quality]}</span>
+            <button
+              onClick={useMix}
+              className="flex-none rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95"
+            >
+              Use this mix
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -17,6 +17,8 @@ interface MixerCtx {
   slots: MixSlot[];
   open: boolean;
   result: MixerResult | null;
+  target: string | null;
+  setTarget: (hex: string | null) => void;
   openMixer: () => void;
   closeMixer: () => void;
   addColor: (hex: string) => void;
@@ -38,6 +40,7 @@ export function useMixer() {
 export function MixerProvider({ children }: { children: React.ReactNode }) {
   const [slots, setSlots] = useState<MixSlot[]>([]);
   const [open, setOpen] = useState(false);
+  const [target, setTarget] = useState<string | null>(null);
 
   const openMixer = useCallback(() => {
     setSlots((prev) =>
@@ -96,6 +99,8 @@ export function MixerProvider({ children }: { children: React.ReactNode }) {
       slots,
       open,
       result,
+      target,
+      setTarget,
       openMixer,
       closeMixer,
       addColor,
@@ -105,7 +110,7 @@ export function MixerProvider({ children }: { children: React.ReactNode }) {
       clear,
       loadSlots,
     }),
-    [slots, open, result, openMixer, closeMixer, addColor, removeSlot, setHex, setParts, clear, loadSlots],
+    [slots, open, result, target, openMixer, closeMixer, addColor, removeSlot, setHex, setParts, clear, loadSlots],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
