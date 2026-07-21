@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { HistoryProject } from "@/lib/history/types";
-import { rgbToHex } from "@/lib/image/color";
 import { patchDone } from "@/lib/history/save";
 import { Palette } from "./Palette";
 import { SampleReadout } from "./SampleReadout";
+import { WorkspaceView } from "./WorkspaceView";
 
 interface Props {
   project: HistoryProject;
@@ -13,41 +13,28 @@ interface Props {
   onNew: () => void;
 }
 
-/** A saved project reopened from History — eyedroppable thumbnail, palette, and
- *  a progress checklist that keeps saving as you paint. */
+/** A saved project reopened from History — the full painting workspace on the
+ *  saved thumbnail (zoom, grid, value, flip, eyedropper) plus a progress
+ *  checklist that keeps saving as you paint. */
 export function RestoredProject({ project, authed, onNew }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [sample, setSample] = useState<string | null>(null);
-  const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [done, setDone] = useState<Set<number>>(new Set(project.done));
 
-  useEffect(() => {
-    setDone(new Set(project.done));
-  }, [project.done]);
+  useEffect(() => setDone(new Set(project.done)), [project.done]);
 
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = img.width;
-      canvas.height = img.height;
-      canvas.getContext("2d", { willReadFrequently: true })?.drawImage(img, 0, 0);
-      setSize({ w: img.width, h: img.height });
-    };
-    img.src = project.thumbDataUrl;
+    const image = new Image();
+    image.onload = () => setImg(image);
+    image.src = project.thumbDataUrl;
   }, [project.thumbDataUrl]);
 
-  const samplePoint = (clientX: number, clientY: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas || !size) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = Math.floor(((clientX - rect.left) / rect.width) * size.w);
-    const y = Math.floor(((clientY - rect.top) / rect.height) * size.h);
-    if (x < 0 || y < 0 || x >= size.w || y >= size.h) return;
-    const d = canvas.getContext("2d", { willReadFrequently: true })!.getImageData(x, y, 1, 1).data;
-    setSample(rgbToHex(d[0], d[1], d[2]).toUpperCase());
-  };
+  const draw = useCallback(
+    (ctx: CanvasRenderingContext2D) => {
+      if (img) ctx.drawImage(img, 0, 0);
+    },
+    [img],
+  );
 
   const toggleDone = (i: number) => {
     setDone((prev) => {
@@ -73,14 +60,13 @@ export function RestoredProject({ project, authed, onNew }: Props) {
       </div>
 
       <div className="rounded-[18px] bg-[var(--card)] p-2 shadow-[var(--shadow-sm)]">
-        <canvas
-          ref={canvasRef}
-          onPointerDown={(e) => samplePoint(e.clientX, e.clientY)}
-          className="mx-auto block h-auto max-w-full cursor-crosshair rounded-[14px]"
-          aria-label={project.name}
-        />
+        {img ? (
+          <WorkspaceView width={img.width} height={img.height} draw={draw} onSample={setSample} />
+        ) : (
+          <div className="aspect-[4/3] w-full animate-pulse rounded-[14px] bg-[var(--paper-2)]" />
+        )}
         <p className="mt-1.5 pb-1 text-center text-[12px] text-[var(--ink-soft)]">
-          Tap the image to pick up a color
+          Tap to pick a color · pinch or scroll to zoom · use grid / value / flip
         </p>
       </div>
 
