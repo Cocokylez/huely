@@ -11,7 +11,7 @@ const MIN_LABEL_AREA = 260; // min region size (px) that earns a number
 export function computePbn(
   src: ImageData,
   palette: PaletteColor[],
-): { base: ImageData; labels: PbnLabel[] } {
+): { base: ImageData; labels: PbnLabel[]; index: Uint8Array } {
   const { width: w, height: h, data } = src;
   const base = new ImageData(w, h);
   const od = base.data;
@@ -88,5 +88,5 @@ export function computePbn(
     }
   }
 
-  return { base, labels };
+  return { base, labels, index };
 }

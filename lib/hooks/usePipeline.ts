@@ -58,6 +58,7 @@ export function usePipeline() {
           pbnBase: msg.pbnBase,
           palette: msg.palette,
           labels: msg.labels,
+          index: msg.index,
         });
         setStatus("ready");
         setStage(null);
@@ -70,6 +71,7 @@ export function usePipeline() {
           pbnBase: msg.pbnBase,
           palette: msg.palette,
           labels: msg.labels,
+          index: msg.index,
         });
         setStatus("ready");
         setStage(null);

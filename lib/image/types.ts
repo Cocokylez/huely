@@ -30,4 +30,5 @@ export interface PipelineResult {
   pbnBase: ImageData;
   palette: PaletteColor[];
   labels: PbnLabel[];
+  index: Uint8Array;
 }

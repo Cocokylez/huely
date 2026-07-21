@@ -9,9 +9,13 @@ create table if not exists public.projects (
   color_count int  not null default 8,
   palette     jsonb not null default '[]'::jsonb,
   mixer       jsonb not null default '[]'::jsonb,
+  done        jsonb not null default '[]'::jsonb,
   thumb       text,
   created_at  timestamptz not null default now()
 );
+
+-- If the table already exists from an earlier run, add the progress column:
+alter table public.projects add column if not exists done jsonb not null default '[]'::jsonb;
 
 alter table public.projects enable row level security;
 

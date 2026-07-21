@@ -7,6 +7,7 @@ interface ProjectRow {
   color_count: number;
   palette: HistoryProject["palette"];
   mixer: HistoryProject["mixer"];
+  done: number[] | null;
   thumb: string;
   created_at: string;
 }
@@ -18,6 +19,7 @@ function rowToProject(row: ProjectRow): HistoryProject {
     colorCount: row.color_count,
     palette: row.palette ?? [],
     mixer: row.mixer ?? [],
+    done: row.done ?? [],
     thumbDataUrl: row.thumb ?? "",
     createdAt: new Date(row.created_at).getTime(),
   };
@@ -47,6 +49,7 @@ export async function cloudSave(project: HistoryProject): Promise<void> {
     color_count: project.colorCount,
     palette: project.palette,
     mixer: project.mixer,
+    done: project.done,
     thumb: project.thumbDataUrl,
   });
   if (error) throw error;
@@ -68,9 +71,16 @@ export async function cloudUpdate(project: HistoryProject): Promise<void> {
       color_count: project.colorCount,
       palette: project.palette,
       mixer: project.mixer,
+      done: project.done,
       thumb: project.thumbDataUrl,
     })
     .eq("id", project.id);
+  if (error) throw error;
+}
+
+export async function cloudUpdateDone(id: string, done: number[]): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("projects").update({ done }).eq("id", id);
   if (error) throw error;
 }
 

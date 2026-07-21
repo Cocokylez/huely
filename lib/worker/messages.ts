@@ -15,6 +15,7 @@ export type WorkerResponse =
       pbnBase: ImageData;
       palette: PaletteColor[];
       labels: PbnLabel[];
+      index: Uint8Array;
     }
   | {
       type: "requantize";
@@ -22,4 +23,5 @@ export type WorkerResponse =
       pbnBase: ImageData;
       palette: PaletteColor[];
       labels: PbnLabel[];
+      index: Uint8Array;
     };

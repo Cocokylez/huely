@@ -6,7 +6,7 @@ import { usePipeline } from "@/lib/hooks/usePipeline";
 import { COLOR_COUNT_OPTIONS } from "@/lib/image/constants";
 import type { ViewMode } from "@/lib/image/types";
 import type { HistoryProject } from "@/lib/history/types";
-import { saveProject, updateProject, getProject } from "@/lib/history/save";
+import { saveProject, updateProject, getProject, patchDone } from "@/lib/history/save";
 import { imageDataToThumb } from "@/lib/image/thumbnail";
 import { downloadImageData, printGuide, imageDataToDataUrl } from "@/lib/exports";
 import { useMixer } from "@/components/mixer/MixerProvider";
@@ -21,10 +21,11 @@ import { SampleReadout } from "./SampleReadout";
 import { RestoredProject } from "./RestoredProject";
 
 function defaultName() {
-  return new Date().toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  }) + " · " + new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return (
+    new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+    " · " +
+    new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
+  );
 }
 
 interface Props {
@@ -41,31 +42,36 @@ export function StudioClient({ authed, openId }: Props) {
 
   const [view, setView] = useState<ViewMode>("oil");
   const [sample, setSample] = useState<string | null>(null);
+  const [done, setDone] = useState<Set<number>>(new Set());
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  // Auto-saved project state (spec: auto-save on process, ✎ renames inline).
   const [projectId, setProjectId] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
   const [saved, setSaved] = useState(false);
   const [editing, setEditing] = useState(false);
   const pendingSaveRef = useRef<"new" | "update" | null>(null);
+  const thumbRef = useRef<string>("");
 
-  // Restored project (opened from History / Recent).
   const [restored, setRestored] = useState<HistoryProject | null>(null);
-  useEffect(() => {
-    if (!openId) return;
-    getProject(authed, openId)
-      .then((p) => {
-        if (p) {
-          setRestored(p);
-          setMixSource(p.palette);
-          if (p.mixer.length) loadSlots(p.mixer);
-        }
-      })
-      .catch(() => toast("Couldn't open that project"));
-  }, [openId, authed, loadSlots, toast]);
+  const openRestored = useCallback(
+    (id: string) => {
+      getProject(authed, id)
+        .then((p) => {
+          if (p) {
+            setRestored(p);
+            setMixSource(p.palette);
+            if (p.mixer.length) loadSlots(p.mixer);
+          }
+        })
+        .catch(() => toast("Couldn't open that project"));
+    },
+    [authed, loadSlots, toast],
+  );
 
-  // Publish the current palette to the mixer's "From your palette" chips.
+  useEffect(() => {
+    if (openId) openRestored(openId);
+  }, [openId, openRestored]);
+
   useEffect(() => {
     if (result) setMixSource(result.palette);
   }, [result]);
@@ -77,21 +83,28 @@ export function StudioClient({ authed, openId }: Props) {
     const kind = pendingSaveRef.current;
     pendingSaveRef.current = null;
 
+    const thumb = imageDataToThumb(result.oil);
+    thumbRef.current = thumb;
+    const id = kind === "new" ? crypto.randomUUID() : projectId!;
+    const nm = kind === "new" ? defaultName() : name;
+
     const project: HistoryProject = {
-      id: kind === "new" ? crypto.randomUUID() : projectId!,
-      name: kind === "new" ? defaultName() : name,
+      id,
+      name: nm,
       colorCount,
       palette: result.palette,
       mixer: slots,
-      thumbDataUrl: imageDataToThumb(result.oil),
+      done: kind === "new" ? [] : [...done],
+      thumbDataUrl: thumb,
       createdAt: Date.now(),
     };
 
     (kind === "new" ? saveProject(authed, project) : updateProject(authed, project))
       .then(() => {
         if (kind === "new") {
-          setProjectId(project.id);
-          setName(project.name);
+          setProjectId(id);
+          setName(nm);
+          setDone(new Set());
         }
         setSaved(true);
       })
@@ -104,6 +117,7 @@ export function StudioClient({ authed, openId }: Props) {
       setRestored(null);
       setSample(null);
       setView("oil");
+      setDone(new Set());
       setProjectId(null);
       setSaved(false);
       pendingSaveRef.current = "new";
@@ -113,13 +127,24 @@ export function StudioClient({ authed, openId }: Props) {
   );
 
   const requantize = (n: number) => {
+    setDone(new Set()); // palette indices change meaning at a new count
     if (projectId) pendingSaveRef.current = "update";
     setColorCount(n);
   };
 
-  const commitRename = async (next: string) => {
+  const toggleDone = (i: number) => {
+    setDone((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      if (projectId) patchDone(authed, projectId, [...next]).catch(() => {});
+      return next;
+    });
+  };
+
+  const commitRename = async (nextName: string) => {
     setEditing(false);
-    const trimmed = next.trim();
+    const trimmed = nextName.trim();
     if (!trimmed || trimmed === name || !projectId || !result) return;
     setName(trimmed);
     try {
@@ -129,7 +154,8 @@ export function StudioClient({ authed, openId }: Props) {
         colorCount,
         palette: result.palette,
         mixer: slots,
-        thumbDataUrl: imageDataToThumb(result.oil),
+        done: [...done],
+        thumbDataUrl: thumbRef.current || imageDataToThumb(result.oil),
         createdAt: Date.now(),
       });
     } catch {
@@ -141,6 +167,7 @@ export function StudioClient({ authed, openId }: Props) {
     setRestored(null);
     setSample(null);
     setView("oil");
+    setDone(new Set());
     setProjectId(null);
     setSaved(false);
     reset();
@@ -150,8 +177,6 @@ export function StudioClient({ authed, openId }: Props) {
 
   const download = () => {
     if (!result) return;
-    const layer = view === "original" ? result.original : view === "pbn" ? result.pbnBase : result.oil;
-    // For PBN, capture the displayed canvas (labels included).
     if (view === "pbn" && canvasRef.current) {
       canvasRef.current.toBlob((blob) => {
         if (!blob) return;
@@ -164,46 +189,34 @@ export function StudioClient({ authed, openId }: Props) {
       });
       return;
     }
+    const layer = view === "original" ? result.original : result.oil;
     downloadImageData(layer, `huely-${view}.png`);
   };
 
   const print = () => {
     if (!result || !canvasRef.current) return;
-    const wasPbn = view === "pbn";
-    // Print the paint-by-numbers view with its numbers, from the display canvas.
-    const dataUrl = wasPbn
-      ? canvasRef.current.toDataURL("image/png")
-      : imageDataToDataUrl(result.pbnBase);
+    const dataUrl =
+      view === "pbn" ? canvasRef.current.toDataURL("image/png") : imageDataToDataUrl(result.pbnBase);
     printGuide(dataUrl, result.palette, name || "Paint-by-numbers guide");
   };
 
   // ---- Screens ----
   if (restored) {
-    return <RestoredProject project={restored} onNew={startOver} />;
+    return <RestoredProject project={restored} authed={authed} onNew={startOver} />;
   }
 
   if (!result) {
     if (status === "processing") {
       return <Processing stage={stage} previewUrl={previewUrl} onCancel={startOver} />;
     }
-    return <Uploader onFile={handleFile} onOpenProject={(id) => setRestoredById(id)} authed={authed} error={error} />;
+    return <Uploader onFile={handleFile} onOpenProject={openRestored} authed={authed} error={error} />;
   }
 
-  function setRestoredById(id: string) {
-    getProject(authed, id)
-      .then((p) => {
-        if (p) {
-          setRestored(p);
-          setMixSource(p.palette);
-          if (p.mixer.length) loadSlots(p.mixer);
-        }
-      })
-      .catch(() => toast("Couldn't open that project"));
-  }
+  const total = result.palette.length;
+  const doneCount = [...done].filter((i) => i < total).length;
 
   return (
     <div>
-      {/* Name + saved state */}
       <div className="mb-2 flex items-center justify-between gap-3">
         {editing ? (
           <input
@@ -234,9 +247,9 @@ export function StudioClient({ authed, openId }: Props) {
       </div>
 
       <div className="rounded-[18px] bg-[var(--card)] p-2 shadow-[var(--shadow-sm)]">
-        <ImageCanvas result={result} view={view} onSample={setSample} canvasRef={canvasRef} />
+        <ImageCanvas result={result} view={view} onSample={setSample} canvasRef={canvasRef} done={done} />
         <p className="mt-1.5 pb-1 text-center text-[12px] text-[var(--ink-soft)]">
-          Tap the image to pick up a color
+          Tap to pick a color · pinch or scroll to zoom · drag to pan
         </p>
       </div>
 
@@ -258,9 +271,24 @@ export function StudioClient({ authed, openId }: Props) {
             </select>
           </label>
         </div>
-        <Palette colors={result.palette} />
+
+        {/* Progress */}
+        <div className="mb-3 flex items-center gap-3">
+          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--paper-2)]">
+            <div
+              className="h-full rounded-full bg-[var(--accent-2)] transition-all"
+              style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}
+            />
+          </div>
+          <span className="flex-none text-[12px] font-semibold text-[var(--ink-soft)]">
+            {doneCount === total && total > 0 ? "All done 🎉" : `${doneCount} of ${total} done`}
+          </span>
+        </div>
+
+        <Palette colors={result.palette} done={done} onToggleDone={toggleDone} />
         <p className="mt-3 text-[12px] text-[var(--ink-soft)]">
-          Tap a chip to copy its color, or <b>+ Mixer</b> to blend it.
+          Tap a chip to copy · <b>+ Mixer</b> to blend · <b>✓</b> to mark a color painted (it fades
+          in the by-numbers view).
         </p>
       </div>
 

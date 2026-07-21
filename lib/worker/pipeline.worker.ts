@@ -18,7 +18,7 @@ ctx.onmessage = (e: MessageEvent<WorkerRequest>) => {
     stage("colors");
     const palette = extractPalette(oil, msg.colorCount);
     stage("numbering");
-    const { base, labels } = computePbn(oil, palette);
+    const { base, labels, index } = computePbn(oil, palette);
     const res: WorkerResponse = {
       type: "process",
       id: msg.id,
@@ -26,6 +26,7 @@ ctx.onmessage = (e: MessageEvent<WorkerRequest>) => {
       pbnBase: base,
       palette,
       labels,
+      index,
     };
     ctx.postMessage(res);
     return;
@@ -35,13 +36,14 @@ ctx.onmessage = (e: MessageEvent<WorkerRequest>) => {
     stage("colors");
     const palette = extractPalette(msg.oil, msg.colorCount);
     stage("numbering");
-    const { base, labels } = computePbn(msg.oil, palette);
+    const { base, labels, index } = computePbn(msg.oil, palette);
     const res: WorkerResponse = {
       type: "requantize",
       id: msg.id,
       pbnBase: base,
       palette,
       labels,
+      index,
     };
     ctx.postMessage(res);
   }

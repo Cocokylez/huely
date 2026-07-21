@@ -6,6 +6,8 @@ export interface HistoryProject {
   colorCount: number;
   palette: PaletteColor[];
   mixer: MixSlot[];
+  /** Palette indices the painter has marked finished. */
+  done: number[];
   thumbDataUrl: string;
   createdAt: number;
 }

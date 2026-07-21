@@ -1,6 +1,6 @@
 import type { HistoryProject } from "./types";
 import { localSave, localGet } from "./local";
-import { cloudSave, cloudUpdate, cloudGet } from "./cloud";
+import { cloudSave, cloudUpdate, cloudGet, cloudUpdateDone } from "./cloud";
 
 /** Save a new project — cloud when signed in, local IndexedDB otherwise. */
 export async function saveProject(authed: boolean, project: HistoryProject): Promise<void> {
@@ -20,4 +20,14 @@ export async function getProject(
   id: string,
 ): Promise<HistoryProject | undefined> {
   return authed ? cloudGet(id) : localGet(id);
+}
+
+/** Patch just the progress (done indices) — cheap, no thumbnail regen. */
+export async function patchDone(authed: boolean, id: string, done: number[]): Promise<void> {
+  if (authed) {
+    await cloudUpdateDone(id, done);
+  } else {
+    const existing = await localGet(id);
+    if (existing) await localSave({ ...existing, done });
+  }
 }

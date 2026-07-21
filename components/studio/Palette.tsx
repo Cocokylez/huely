@@ -5,8 +5,14 @@ import { luminance } from "@/lib/image/color";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { useToast } from "@/components/ui/ToastProvider";
 
+interface Props {
+  colors: PaletteColor[];
+  done?: Set<number>;
+  onToggleDone?: (index: number) => void;
+}
+
 /** Paint-chip grid — auto-fill minmax(96px,1fr), gap 12 (spec 02 · Paint chip). */
-export function Palette({ colors }: { colors: PaletteColor[] }) {
+export function Palette({ colors, done, onToggleDone }: Props) {
   const { addColor } = useMixer();
   const { toast } = useToast();
 
@@ -20,10 +26,13 @@ export function Palette({ colors }: { colors: PaletteColor[] }) {
       {colors.map((c, i) => {
         const hex = c.hex.toUpperCase();
         const dark = luminance(c) > 140;
+        const isDone = !!done?.has(i);
         return (
           <div
             key={`${hex}-${i}`}
-            className="flex flex-col overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--card-2)] shadow-[var(--shadow-sm)]"
+            className={`flex flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-sm)] transition ${
+              isDone ? "border-[var(--accent-2)] opacity-70" : "border-[var(--line)]"
+            } bg-[var(--card-2)]`}
           >
             <button
               onClick={() => copy(hex)}
@@ -40,6 +49,11 @@ export function Palette({ colors }: { colors: PaletteColor[] }) {
               >
                 {i + 1}
               </span>
+              {isDone && (
+                <span className="absolute inset-0 grid place-items-center bg-black/15 text-[22px] font-bold text-white drop-shadow">
+                  ✓
+                </span>
+              )}
               <span className="absolute bottom-1.5 right-[7px] rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
                 copy
               </span>
@@ -52,12 +66,28 @@ export function Palette({ colors }: { colors: PaletteColor[] }) {
                 rgb({c.r}, {c.g}, {c.b})
               </small>
             </div>
-            <button
-              onClick={() => addColor(c.hex)}
-              className="border-t border-[var(--line)] py-1.5 text-[11px] font-bold text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--accent)]"
-            >
-              + Mixer
-            </button>
+            <div className="flex border-t border-[var(--line)]">
+              <button
+                onClick={() => addColor(c.hex)}
+                className="flex-1 py-1.5 text-[11px] font-bold text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--accent)]"
+              >
+                + Mixer
+              </button>
+              {onToggleDone && (
+                <button
+                  onClick={() => onToggleDone(i)}
+                  aria-pressed={isDone}
+                  title={isDone ? "Mark not done" : "Mark done"}
+                  className={`grid w-9 place-items-center border-l border-[var(--line)] text-[13px] font-bold transition ${
+                    isDone
+                      ? "bg-[var(--accent-2)] text-white"
+                      : "text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--accent-2)]"
+                  }`}
+                >
+                  ✓
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
