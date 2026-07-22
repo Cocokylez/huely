@@ -111,6 +111,19 @@ body {
   animation: shimmer 1.4s linear infinite;
 }
 
+/* Focus / fullscreen workspace */
+.workspace-focus {
+  background: var(--paper);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow: auto;
+}
+.workspace-focus > .relative {
+  max-height: calc(100vh - 90px);
+}
+
 /* ---- Print guide (built imperatively into #print-area) ---- */
 .print-area {
   display: none;

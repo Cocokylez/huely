@@ -16,6 +16,7 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 8;
 const TAP_SLOP = 6;
 const GRID_STEPS = [0, 3, 4, 6, 8];
+const GUIDE_LABELS = ["Guides", "Center", "Diagonals", "Center + diag"];
 
 const toolChip = (active: boolean) =>
   `rounded-full border px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
@@ -25,20 +26,28 @@ const toolChip = (active: boolean) =>
   }`;
 
 /**
- * Reusable painting workspace: zoom/pan + artist tools (grid method, value
- * study, flip) + tap-to-sample eyedropper. Renders whatever `draw` paints.
+ * Reusable painting workspace: zoom/pan + a full artist toolset (grid method,
+ * composition guides, value study, brightness/contrast/saturation adjustments,
+ * flip, focus/fullscreen) + tap-to-sample eyedropper. Renders whatever `draw`
+ * paints; the eyedropper always reads the true (unadjusted) pixel color.
  */
 export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Props) {
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
   const containerRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+
   const [gridN, setGridN] = useState(0);
+  const [guides, setGuides] = useState(0);
   const [gray, setGray] = useState(false);
   const [flip, setFlip] = useState(false);
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [adj, setAdj] = useState({ b: 100, c: 100, s: 100 });
+  const [isFocus, setIsFocus] = useState(false);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
@@ -55,6 +64,12 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
     if (!ctx) return;
     draw(ctx);
   }, [draw, width, height, ref]);
+
+  useEffect(() => {
+    const onFs = () => setIsFocus(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onFs);
+    return () => document.removeEventListener("fullscreenchange", onFs);
+  }, []);
 
   const clampPan = (s: number, x: number, y: number) => {
     const el = containerRef.current;
@@ -93,8 +108,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
     return { x: clientX - r.left, y: clientY - r.top };
   };
 
-  // Native, non-passive wheel listener so wheel-zoom over the canvas doesn't
-  // scroll the page (React's onWheel is passive → preventDefault is ignored).
   const zoomRef = useRef(zoomAt);
   zoomRef.current = zoomAt;
   useEffect(() => {
@@ -169,21 +182,43 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
     if (wasTap && downAt.current) sample(e.clientX, e.clientY);
   };
 
-  const gridLines: { x1: number; y1: number; x2: number; y2: number }[] = [];
+  const toggleFocus = () => {
+    const el = rootRef.current;
+    if (!el) return;
+    if (document.fullscreenElement) document.exitFullscreen();
+    else el.requestFullscreen?.();
+  };
+
+  // ---- Overlays (image-space lines, crisp at any zoom, visible on any bg) ----
+  const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
   if (gridN > 0) {
     const rows = Math.max(1, Math.round((gridN * height) / width));
-    for (let i = 1; i < gridN; i++) {
-      const x = (i * width) / gridN;
-      gridLines.push({ x1: x, y1: 0, x2: x, y2: height });
-    }
-    for (let j = 1; j < rows; j++) {
-      const y = (j * height) / rows;
-      gridLines.push({ x1: 0, y1: y, x2: width, y2: y });
-    }
+    for (let i = 1; i < gridN; i++) lines.push({ x1: (i * width) / gridN, y1: 0, x2: (i * width) / gridN, y2: height });
+    for (let j = 1; j < rows; j++) lines.push({ x1: 0, y1: (j * height) / rows, x2: width, y2: (j * height) / rows });
+  }
+  if (guides === 1 || guides === 3) {
+    lines.push({ x1: width / 2, y1: 0, x2: width / 2, y2: height });
+    lines.push({ x1: 0, y1: height / 2, x2: width, y2: height / 2 });
+  }
+  if (guides === 2 || guides === 3) {
+    lines.push({ x1: 0, y1: 0, x2: width, y2: height });
+    lines.push({ x1: width, y1: 0, x2: 0, y2: height });
   }
 
+  const filterStr =
+    [
+      gray ? "grayscale(1)" : "",
+      adj.b !== 100 ? `brightness(${adj.b}%)` : "",
+      adj.c !== 100 ? `contrast(${adj.c}%)` : "",
+      adj.s !== 100 ? `saturate(${adj.s}%)` : "",
+    ]
+      .filter(Boolean)
+      .join(" ") || "none";
+
+  const adjusted = adj.b !== 100 || adj.c !== 100 || adj.s !== 100;
+
   return (
-    <div>
+    <div ref={rootRef} className={isFocus ? "workspace-focus" : undefined}>
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <button
           onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
@@ -192,13 +227,57 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
         >
           ⊞ {gridN > 0 ? `Grid ${gridN}` : "Grid"}
         </button>
+        <button
+          onClick={() => setGuides((g) => (g + 1) % 4)}
+          className={toolChip(guides > 0)}
+          title="Composition guides"
+        >
+          ⌖ {GUIDE_LABELS[guides]}
+        </button>
         <button onClick={() => setGray((g) => !g)} className={toolChip(gray)} title="Value / grayscale study">
           ◐ Value
+        </button>
+        <button onClick={() => setShowAdjust((s) => !s)} className={toolChip(showAdjust || adjusted)} title="Brightness / contrast / saturation">
+          ⚙ Adjust
         </button>
         <button onClick={() => setFlip((f) => !f)} className={toolChip(flip)} title="Flip horizontally to spot errors">
           ⇄ Flip
         </button>
+        <button onClick={toggleFocus} className={toolChip(isFocus)} title="Focus / fullscreen">
+          ⤢ Focus
+        </button>
       </div>
+
+      {showAdjust && (
+        <div className="mb-2 grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)] p-3">
+          {(
+            [
+              ["Brightness", "b"],
+              ["Contrast", "c"],
+              ["Saturation", "s"],
+            ] as const
+          ).map(([label, key]) => (
+            <label key={key} className="flex items-center gap-3 text-[12px]">
+              <span className="w-[70px] flex-none text-[var(--ink-soft)]">{label}</span>
+              <input
+                type="range"
+                min={0}
+                max={200}
+                value={adj[key]}
+                onChange={(e) => setAdj((a) => ({ ...a, [key]: Number(e.target.value) }))}
+                className="h-1 flex-1 accent-[var(--accent)]"
+              />
+              <span className="w-[38px] flex-none text-right font-mono text-[var(--ink-soft)]">{adj[key]}%</span>
+            </label>
+          ))}
+          <button
+            onClick={() => setAdj({ b: 100, c: 100, s: 100 })}
+            className="justify-self-start rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
+          >
+            Reset adjustments
+          </button>
+        </div>
+      )}
 
       <div className="relative">
         <div
@@ -207,7 +286,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
           style={{
             aspectRatio: `${width} / ${height}`,
             cursor: scale > 1 ? "grab" : "crosshair",
-            // At 100% let the page scroll past the image; when zoomed we own the gesture to pan.
             touchAction: scale > 1 ? "none" : "pan-y",
           }}
           onPointerDown={onPointerDown}
@@ -223,13 +301,10 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
               <canvas
                 ref={ref}
                 className="absolute inset-0 h-full w-full"
-                style={{
-                  imageRendering: scale > 2.5 ? "pixelated" : "auto",
-                  filter: gray ? "grayscale(1)" : "none",
-                }}
+                style={{ imageRendering: scale > 2.5 ? "pixelated" : "auto", filter: filterStr }}
                 aria-label="Your image"
               />
-              {gridLines.length > 0 && (
+              {lines.length > 0 && (
                 <svg
                   viewBox={`0 0 ${width} ${height}`}
                   preserveAspectRatio="none"
@@ -237,7 +312,7 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
                   style={{ mixBlendMode: "difference" }}
                   aria-hidden
                 >
-                  {gridLines.map((l, i) => (
+                  {lines.map((l, i) => (
                     <line
                       key={i}
                       x1={l.x1}
