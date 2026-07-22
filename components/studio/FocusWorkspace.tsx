@@ -6,6 +6,7 @@ import { nearestName } from "@/lib/image/colorNames";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { ImageCanvas } from "./ImageCanvas";
 import { Palette } from "./Palette";
+import { PaintingSteps } from "./PaintingSteps";
 
 interface Props {
   result: PipelineResult;
@@ -36,6 +37,7 @@ export function FocusWorkspace(props: Props) {
   const { result, view, onView, onSample, done, onToggleDone, focusColor, onFocus, onExit } = props;
   const { openMixer } = useMixer();
   const [panelOpen, setPanelOpen] = useState(false);
+  const [panelTab, setPanelTab] = useState<"colors" | "steps">("colors");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -95,13 +97,40 @@ export function FocusWorkspace(props: Props) {
         </span>
       </div>
 
-      <Palette
-        colors={result.palette}
-        done={done}
-        onToggleDone={onToggleDone}
-        focus={focusColor}
-        onFocus={onFocus}
-      />
+      <div className="mb-3 flex gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px]">
+        {(["colors", "steps"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setPanelTab(t)}
+            className={`flex-1 rounded-full py-1.5 text-[12px] font-semibold capitalize transition ${
+              panelTab === t
+                ? "bg-[var(--card-2)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
+                : "text-[var(--ink-soft)]"
+            }`}
+          >
+            {t === "colors" ? "Colors" : "Steps"}
+          </button>
+        ))}
+      </div>
+
+      {panelTab === "colors" ? (
+        <Palette
+          colors={result.palette}
+          done={done}
+          onToggleDone={onToggleDone}
+          focus={focusColor}
+          onFocus={onFocus}
+        />
+      ) : (
+        <PaintingSteps
+          palette={result.palette}
+          index={result.index}
+          done={done}
+          onToggleDone={onToggleDone}
+          focus={focusColor}
+          onFocus={onFocus}
+        />
+      )}
     </>
   );
 

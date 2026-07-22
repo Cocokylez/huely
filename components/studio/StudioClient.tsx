@@ -28,6 +28,8 @@ import { Palette } from "./Palette";
 import { SampleReadout } from "./SampleReadout";
 import { RestoredProject } from "./RestoredProject";
 import { FocusWorkspace } from "./FocusWorkspace";
+import { PaintingSteps } from "./PaintingSteps";
+import { CanvasShot } from "./CanvasShot";
 
 function defaultName() {
   return (
@@ -428,6 +430,21 @@ export function StudioClient({ authed, openId }: Props) {
           Tap a chip to copy · <b>◎</b> to paint just that color (rest fades) · <b>+ Mixer</b> to
           blend · <b>✓</b> when it&apos;s done.
         </p>
+      </div>
+
+      <div className="mt-7">
+        <PaintingSteps
+          palette={result.palette}
+          index={result.index}
+          done={done}
+          onToggleDone={toggleDone}
+          focus={focusColor}
+          onFocus={toggleFocus}
+        />
+      </div>
+
+      <div className="mt-7">
+        <CanvasShot projectId={projectId} result={result} />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2.5">

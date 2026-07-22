@@ -1,5 +1,14 @@
 import type { HistoryProject } from "./types";
-import { localSave, localGet, saveSource, getSource, removeSource } from "./local";
+import {
+  localSave,
+  localGet,
+  saveSource,
+  getSource,
+  removeSource,
+  saveShot,
+  getShot,
+  removeShot,
+} from "./local";
 import { cloudSave, cloudUpdate, cloudGet, cloudUpdateDone } from "./cloud";
 
 /** Save a new project — cloud when signed in, local IndexedDB otherwise. */
@@ -46,6 +55,34 @@ export async function getCachedSource(id: string): Promise<string | undefined> {
 export async function removeCachedSource(id: string): Promise<void> {
   try {
     await removeSource(id);
+  } catch {
+    // best effort
+  }
+}
+
+/**
+ * A photo of the painter's real canvas, kept ON-DEVICE only (never uploaded)
+ * so they can compare their work against the reference.
+ */
+export async function cacheShot(id: string, dataUrl: string): Promise<void> {
+  try {
+    await saveShot(id, dataUrl);
+  } catch {
+    // storage full/unavailable — the compare view just won't have a photo
+  }
+}
+
+export async function getCachedShot(id: string): Promise<string | undefined> {
+  try {
+    return await getShot(id);
+  } catch {
+    return undefined;
+  }
+}
+
+export async function removeCachedShot(id: string): Promise<void> {
+  try {
+    await removeShot(id);
   } catch {
     // best effort
   }
