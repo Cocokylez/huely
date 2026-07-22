@@ -36,7 +36,7 @@ export function Mixer() {
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center min-[900px]:items-stretch min-[900px]:justify-end">
+    <div className="fixed inset-0 z-[60] flex items-end justify-center min-[900px]:items-stretch min-[900px]:justify-end">
       <div
         className="absolute inset-0 bg-[rgba(30,22,14,0.45)]"
         style={{ animation: "fade 0.2s ease" }}

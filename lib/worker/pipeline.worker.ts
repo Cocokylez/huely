@@ -2,7 +2,7 @@
 import { oilPaint } from "@/lib/image/oilPaint";
 import { extractPalette } from "@/lib/image/quantize";
 import { computePbn } from "@/lib/image/paintByNumbers";
-import { OIL_RADIUS, OIL_LEVELS } from "@/lib/image/constants";
+import { OIL_LEVELS, oilRadiusFor } from "@/lib/image/constants";
 import type { WorkerRequest, WorkerResponse } from "./messages";
 
 const ctx = self as unknown as DedicatedWorkerGlobalScope;
@@ -14,7 +14,11 @@ ctx.onmessage = (e: MessageEvent<WorkerRequest>) => {
 
   if (msg.type === "process") {
     stage("painting");
-    const oil = oilPaint(msg.imageData, OIL_RADIUS, OIL_LEVELS);
+    const oil = oilPaint(
+      msg.imageData,
+      oilRadiusFor(msg.imageData.width, msg.imageData.height),
+      OIL_LEVELS,
+    );
     stage("colors");
     const palette = extractPalette(oil, msg.colorCount);
     stage("numbering");

@@ -1,7 +1,7 @@
 import type { PaletteColor, PbnLabel } from "./types";
 import { mix } from "./color";
 
-const MIN_LABEL_AREA = 260; // min region size (px) that earns a number
+import { minLabelAreaFor } from "./constants";
 
 /**
  * Build the paint-by-numbers layer: a posterized fill with region outlines,
@@ -16,6 +16,7 @@ export function computePbn(
   const base = new ImageData(w, h);
   const od = base.data;
   const index = new Uint8Array(w * h); // nearest palette index per pixel
+  const minLabelArea = minLabelAreaFor(w, h);
 
   // Map each pixel to nearest palette color; fill slightly lightened.
   for (let p = 0, i = 0; p < w * h; p++, i += 4) {
@@ -78,7 +79,7 @@ export function computePbn(
       if (py < h - 1 && !seen[p + w] && index[p + w] === target) { seen[p + w] = 1; stack[sp++] = p + w; }
     }
 
-    if (area >= MIN_LABEL_AREA) {
+    if (area >= minLabelArea) {
       labels.push({
         x: Math.round(sumX / area),
         y: Math.round(sumY / area),

@@ -283,7 +283,7 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
               <canvas
                 ref={ref}
                 className="absolute inset-0 h-full w-full"
-                style={{ imageRendering: scale > 2.5 ? "pixelated" : "auto", filter: filterStr }}
+                style={{ imageRendering: "auto", filter: filterStr }}
                 aria-label="Your image"
               />
               {lines.length > 0 && (
