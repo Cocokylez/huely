@@ -9,10 +9,12 @@ interface Props {
   colors: PaletteColor[];
   done?: Set<number>;
   onToggleDone?: (index: number) => void;
+  focus?: number | null;
+  onFocus?: (index: number) => void;
 }
 
 /** Paint-chip grid — auto-fill minmax(96px,1fr), gap 12 (spec 02 · Paint chip). */
-export function Palette({ colors, done, onToggleDone }: Props) {
+export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
   const { addColor } = useMixer();
   const { toast } = useToast();
 
@@ -27,11 +29,16 @@ export function Palette({ colors, done, onToggleDone }: Props) {
         const hex = c.hex.toUpperCase();
         const dark = luminance(c) > 140;
         const isDone = !!done?.has(i);
+        const isFocus = focus === i;
         return (
           <div
             key={`${hex}-${i}`}
-            className={`flex flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-sm)] transition ${
-              isDone ? "border-[var(--accent-2)] opacity-70" : "border-[var(--line)]"
+            className={`relative flex flex-col overflow-hidden rounded-xl border shadow-[var(--shadow-sm)] transition ${
+              isFocus
+                ? "border-[var(--accent)] ring-2 ring-[var(--accent)]"
+                : isDone
+                  ? "border-[var(--accent-2)] opacity-70"
+                  : "border-[var(--line)]"
             } bg-[var(--card-2)]`}
           >
             <button
@@ -58,6 +65,22 @@ export function Palette({ colors, done, onToggleDone }: Props) {
                 copy
               </span>
             </button>
+
+            {onFocus && (
+              <button
+                onClick={() => onFocus(i)}
+                aria-pressed={isFocus}
+                title={isFocus ? "Show all colors" : "Paint just this color"}
+                className={`absolute right-[7px] top-[7px] grid h-[22px] w-[22px] place-items-center rounded-full border text-[11px] transition ${
+                  isFocus
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-white"
+                    : "border-white/60 bg-black/25 text-white hover:bg-[var(--accent)]"
+                }`}
+              >
+                ◎
+              </button>
+            )}
+
             <div className="px-2 pb-1.5 pt-2">
               <b className="block text-[12px]" style={{ fontFamily: "var(--mono)" }}>
                 {hex}

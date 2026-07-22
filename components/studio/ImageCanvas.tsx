@@ -11,6 +11,8 @@ interface Props {
   onSample: (hex: string) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement | null>;
   done?: Set<number>;
+  /** When set, only this palette color's regions stay vivid; the rest fades. */
+  focus?: number | null;
 }
 
 function readVar(name: string, fallback: [number, number, number]): [number, number, number] {
@@ -27,23 +29,29 @@ function readVar(name: string, fallback: [number, number, number]): [number, num
 
 /** Studio canvas — draws the selected layer (with progress fade + numbers on
  *  the by-numbers view) into the reusable painting workspace. */
-export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) {
+export function ImageCanvas({ result, view, onSample, canvasRef, done, focus }: Props) {
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D) => {
       const layer =
         view === "original" ? result.original : view === "pbn" ? result.pbnBase : result.oil;
 
-      if (view === "pbn" && done && done.size) {
+      const focusing = focus != null;
+      const fading = focusing || (view === "pbn" && done && done.size);
+
+      if (fading) {
         const [pr, pg, pb] = readVar("--paper", [244, 239, 230]);
         const out = new ImageData(result.w, result.h);
         out.data.set(layer.data);
         const d = out.data;
         const idx = result.index;
         for (let p = 0, i = 0; p < idx.length; p++, i += 4) {
-          if (done.has(idx[p])) {
-            d[i] = mix(d[i], pr, 0.72);
-            d[i + 1] = mix(d[i + 1], pg, 0.72);
-            d[i + 2] = mix(d[i + 2], pb, 0.72);
+          // Focus mode: fade everything except the active color (strong).
+          // Otherwise (by-numbers): fade the colors already finished.
+          const t = focusing ? (idx[p] !== focus ? 0.85 : 0) : done!.has(idx[p]) ? 0.72 : 0;
+          if (t > 0) {
+            d[i] = mix(d[i], pr, t);
+            d[i + 1] = mix(d[i + 1], pg, t);
+            d[i + 2] = mix(d[i + 2], pb, t);
           }
         }
         ctx.putImageData(out, 0, 0);
@@ -66,7 +74,7 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done }: Props) 
         }
       }
     },
-    [result, view, done],
+    [result, view, done, focus],
   );
 
   return (

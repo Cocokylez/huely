@@ -15,6 +15,7 @@ import {
   getCachedSource,
 } from "@/lib/history/save";
 import { imageDataToThumb } from "@/lib/image/thumbnail";
+import { nearestName } from "@/lib/image/colorNames";
 import { downloadImageData, printGuide, imageDataToDataUrl } from "@/lib/exports";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { setMixSource } from "@/components/mixer/mixSource";
@@ -60,6 +61,7 @@ export function StudioClient({ authed, openId }: Props) {
   const [view, setView] = useState<ViewMode>("oil");
   const [sample, setSample] = useState<string | null>(null);
   const [done, setDone] = useState<Set<number>>(new Set());
+  const [focusColor, setFocusColor] = useState<number | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -86,6 +88,7 @@ export function StudioClient({ authed, openId }: Props) {
           setName(p.name);
           setSaved(true);
           setDone(new Set(p.done));
+          setFocusColor(null);
           setSample(null);
           setView("oil");
           pendingSaveRef.current = null;
@@ -153,6 +156,7 @@ export function StudioClient({ authed, openId }: Props) {
       setSample(null);
       setView("oil");
       setDone(new Set());
+      setFocusColor(null);
       setProjectId(null);
       setSaved(false);
       pendingSaveRef.current = "new";
@@ -163,6 +167,7 @@ export function StudioClient({ authed, openId }: Props) {
 
   const requantize = (n: number) => {
     setDone(new Set()); // palette indices change meaning at a new count
+    setFocusColor(null);
     if (projectId) pendingSaveRef.current = "update";
     setColorCount(n);
   };
@@ -175,6 +180,27 @@ export function StudioClient({ authed, openId }: Props) {
       if (projectId) patchDone(authed, projectId, [...next]).catch(() => {});
       return next;
     });
+  };
+
+  const toggleFocus = (i: number) => setFocusColor((f) => (f === i ? null : i));
+
+  // Mark the active color done and advance to the next unfinished color.
+  const doneAndNext = () => {
+    if (focusColor == null || !result) return;
+    const n = result.palette.length;
+    const next = new Set(done);
+    next.add(focusColor);
+    setDone(next);
+    if (projectId) patchDone(authed, projectId, [...next]).catch(() => {});
+    let advance: number | null = null;
+    for (let k = 1; k <= n; k++) {
+      const cand = (focusColor + k) % n;
+      if (!next.has(cand)) {
+        advance = cand;
+        break;
+      }
+    }
+    setFocusColor(advance);
   };
 
   const commitRename = async (nextName: string) => {
@@ -203,6 +229,7 @@ export function StudioClient({ authed, openId }: Props) {
     setSample(null);
     setView("oil");
     setDone(new Set());
+    setFocusColor(null);
     setProjectId(null);
     setSaved(false);
     reset();
@@ -282,11 +309,52 @@ export function StudioClient({ authed, openId }: Props) {
       </div>
 
       <div className="rounded-[18px] bg-[var(--card)] p-2 shadow-[var(--shadow-sm)]">
-        <ImageCanvas result={result} view={view} onSample={setSample} canvasRef={canvasRef} done={done} />
+        <ImageCanvas
+          result={result}
+          view={view}
+          onSample={setSample}
+          canvasRef={canvasRef}
+          done={done}
+          focus={focusColor}
+        />
         <p className="mt-1.5 pb-1 text-center text-[12px] text-[var(--ink-soft)]">
           Tap to pick a color · pinch or scroll to zoom · drag to pan
         </p>
       </div>
+
+      {focusColor != null && result.palette[focusColor] && (
+        <div className="mt-3 flex items-center gap-3 rounded-xl border border-[var(--accent)] bg-[color-mix(in_srgb,var(--accent)_7%,var(--card))] p-2.5">
+          <span
+            className="grid h-9 w-9 flex-none place-items-center rounded-[9px] text-[13px] font-bold text-white"
+            style={{ background: result.palette[focusColor].hex }}
+          >
+            {focusColor + 1}
+          </span>
+          <div className="min-w-0 flex-1 leading-tight">
+            <b className="text-[13px]">Painting this color</b>
+            <small className="block text-[12px] text-[var(--ink-soft)]">
+              {nearestName(
+                result.palette[focusColor].r,
+                result.palette[focusColor].g,
+                result.palette[focusColor].b,
+              )}{" "}
+              · {result.palette[focusColor].hex.toUpperCase()}
+            </small>
+          </div>
+          <button
+            onClick={doneAndNext}
+            className="flex-none rounded-full bg-[var(--accent-2)] px-3 py-1.5 text-[12px] font-semibold text-white active:scale-95"
+          >
+            Done · next
+          </button>
+          <button
+            onClick={() => setFocusColor(null)}
+            className="flex-none rounded-full border border-[var(--line)] bg-[var(--card-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+          >
+            Show all
+          </button>
+        </div>
+      )}
 
       {sample && <SampleReadout hex={sample} />}
 
@@ -320,10 +388,16 @@ export function StudioClient({ authed, openId }: Props) {
           </span>
         </div>
 
-        <Palette colors={result.palette} done={done} onToggleDone={toggleDone} />
+        <Palette
+          colors={result.palette}
+          done={done}
+          onToggleDone={toggleDone}
+          focus={focusColor}
+          onFocus={toggleFocus}
+        />
         <p className="mt-3 text-[12px] text-[var(--ink-soft)]">
-          Tap a chip to copy · <b>+ Mixer</b> to blend · <b>✓</b> to mark a color painted (it fades
-          in the by-numbers view).
+          Tap a chip to copy · <b>◎</b> to paint just that color (rest fades) · <b>+ Mixer</b> to
+          blend · <b>✓</b> when it&apos;s done.
         </p>
       </div>
 
