@@ -19,7 +19,7 @@ const GRID_STEPS = [0, 3, 4, 6, 8];
 const GUIDE_LABELS = ["Guides", "Center", "Diagonals", "Center + diag"];
 
 const toolChip = (active: boolean) =>
-  `rounded-full border px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
+  `shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
     active
       ? "border-[var(--accent)] bg-[var(--accent)] text-white"
       : "border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
@@ -204,7 +204,7 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center gap-1.5">
+      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
         <button
           onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
           className={toolChip(gridN > 0)}
