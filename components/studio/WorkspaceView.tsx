@@ -35,7 +35,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
   const containerRef = useRef<HTMLDivElement>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
 
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
@@ -47,7 +46,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
   const [flip, setFlip] = useState(false);
   const [showAdjust, setShowAdjust] = useState(false);
   const [adj, setAdj] = useState({ b: 100, c: 100, s: 100 });
-  const [isFocus, setIsFocus] = useState(false);
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
@@ -64,12 +62,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
     if (!ctx) return;
     draw(ctx);
   }, [draw, width, height, ref]);
-
-  useEffect(() => {
-    const onFs = () => setIsFocus(!!document.fullscreenElement);
-    document.addEventListener("fullscreenchange", onFs);
-    return () => document.removeEventListener("fullscreenchange", onFs);
-  }, []);
 
   const clampPan = (s: number, x: number, y: number) => {
     const el = containerRef.current;
@@ -182,13 +174,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
     if (wasTap && downAt.current) sample(e.clientX, e.clientY);
   };
 
-  const toggleFocus = () => {
-    const el = rootRef.current;
-    if (!el) return;
-    if (document.fullscreenElement) document.exitFullscreen();
-    else el.requestFullscreen?.();
-  };
-
   // ---- Overlays (image-space lines, crisp at any zoom, visible on any bg) ----
   const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
   if (gridN > 0) {
@@ -218,7 +203,7 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
   const adjusted = adj.b !== 100 || adj.c !== 100 || adj.s !== 100;
 
   return (
-    <div ref={rootRef} className={isFocus ? "workspace-focus" : undefined}>
+    <div>
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <button
           onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
@@ -242,9 +227,6 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
         </button>
         <button onClick={() => setFlip((f) => !f)} className={toolChip(flip)} title="Flip horizontally to spot errors">
           ⇄ Flip
-        </button>
-        <button onClick={toggleFocus} className={toolChip(isFocus)} title="Focus / fullscreen">
-          ⤢ Focus
         </button>
       </div>
 

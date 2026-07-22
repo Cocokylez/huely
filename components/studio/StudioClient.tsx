@@ -27,6 +27,7 @@ import { ImageCanvas } from "./ImageCanvas";
 import { Palette } from "./Palette";
 import { SampleReadout } from "./SampleReadout";
 import { RestoredProject } from "./RestoredProject";
+import { FocusWorkspace } from "./FocusWorkspace";
 
 function defaultName() {
   return (
@@ -62,6 +63,7 @@ export function StudioClient({ authed, openId }: Props) {
   const [sample, setSample] = useState<string | null>(null);
   const [done, setDone] = useState<Set<number>>(new Set());
   const [focusColor, setFocusColor] = useState<number | null>(null);
+  const [focusMode, setFocusMode] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -157,6 +159,7 @@ export function StudioClient({ authed, openId }: Props) {
       setView("oil");
       setDone(new Set());
       setFocusColor(null);
+      setFocusMode(false);
       setProjectId(null);
       setSaved(false);
       pendingSaveRef.current = "new";
@@ -230,6 +233,7 @@ export function StudioClient({ authed, openId }: Props) {
     setView("oil");
     setDone(new Set());
     setFocusColor(null);
+    setFocusMode(false);
     setProjectId(null);
     setSaved(false);
     reset();
@@ -304,8 +308,33 @@ export function StudioClient({ authed, openId }: Props) {
         <span className="flex-none text-[12px] text-[var(--ink-soft)]">{saved ? "Saved ✓" : ""}</span>
       </div>
 
-      <div className="mb-3">
-        <ViewSwitcher view={view} onChange={setView} />
+      {focusMode && (
+        <FocusWorkspace
+          result={result}
+          view={view}
+          onView={setView}
+          onSample={setSample}
+          done={done}
+          onToggleDone={toggleDone}
+          focusColor={focusColor}
+          onFocus={toggleFocus}
+          onDoneNext={doneAndNext}
+          onClearFocus={() => setFocusColor(null)}
+          onExit={() => setFocusMode(false)}
+        />
+      )}
+
+      <div className="mb-3 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <ViewSwitcher view={view} onChange={setView} />
+        </div>
+        <button
+          onClick={() => setFocusMode(true)}
+          title="Focus workspace"
+          className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        >
+          ⤢
+        </button>
       </div>
 
       <div className="rounded-[18px] bg-[var(--card)] p-2 shadow-[var(--shadow-sm)]">
