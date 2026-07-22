@@ -7,6 +7,8 @@ import { useToast } from "@/components/ui/ToastProvider";
 import { nearestName } from "@/lib/image/colorNames";
 import { hexToRgb, rgbToHex } from "@/lib/image/color";
 import { parseColorInput, solveRecipe } from "@/lib/image/recipes";
+import { useMyPaints } from "./myPaints";
+import { MyPaintsEditor } from "./MyPaintsEditor";
 
 /**
  * Color Mixer — bottom sheet on mobile, 380px right side panel on ≥900px
@@ -187,7 +189,9 @@ const QUALITY_COPY = {
 function MatchColor() {
   const { target, setTarget, loadSlots } = useMixer();
   const { toast } = useToast();
+  const myPaints = useMyPaints();
   const [raw, setRaw] = useState("");
+  const [editPaints, setEditPaints] = useState(false);
 
   // A target pushed from outside (eyedropper "Recipe" button) fills the field.
   useEffect(() => {
@@ -195,7 +199,7 @@ function MatchColor() {
   }, [target]);
 
   const parsed = useMemo(() => parseColorInput(raw), [raw]);
-  const recipe = useMemo(() => (parsed ? solveRecipe(parsed) : null), [parsed]);
+  const recipe = useMemo(() => (parsed ? solveRecipe(parsed, myPaints) : null), [parsed, myPaints]);
   const targetHex = parsed ? rgbToHex(parsed[0], parsed[1], parsed[2]).toUpperCase() : null;
 
   const useMix = () => {
@@ -206,10 +210,22 @@ function MatchColor() {
 
   return (
     <div className="rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5">
-      <p className="mb-0.5 text-[15px] font-bold">Match a color</p>
-      <p className="mb-2.5 text-[12px] text-[var(--ink-soft)]">
-        Paste a color to find out what paints to mix.
-      </p>
+      <div className="mb-2.5 flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[15px] font-bold">Match a color</p>
+          <p className="text-[12px] text-[var(--ink-soft)]">
+            Paste a color to find what to mix — from your paints.
+          </p>
+        </div>
+        <button
+          onClick={() => setEditPaints((s) => !s)}
+          className="flex-none rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
+        >
+          🎨 My paints ({myPaints.length})
+        </button>
+      </div>
+
+      {editPaints && <MyPaintsEditor onClose={() => setEditPaints(false)} />}
 
       <div className="flex items-center gap-2">
         <input

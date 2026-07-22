@@ -12,7 +12,7 @@ export interface Paint {
   hex: string;
 }
 
-/** A realistic starter palette a painter would actually own. */
+/** A realistic starter palette a painter would actually own (the default set). */
 export const BASE_PAINTS: Paint[] = [
   { name: "Titanium White", hex: "#ffffff" },
   { name: "Ivory Black", hex: "#1f1e1c" },
@@ -24,6 +24,26 @@ export const BASE_PAINTS: Paint[] = [
   { name: "Cerulean Blue", hex: "#2e7fb4" },
   { name: "Burnt Sienna", hex: "#8a3324" },
   { name: "Sap Green", hex: "#4e7a27" },
+];
+
+/** A broader catalog of common tubes to pick from when building "My paints". */
+export const PAINT_CATALOG: Paint[] = [
+  ...BASE_PAINTS,
+  { name: "Lemon Yellow", hex: "#f6eb61" },
+  { name: "Naples Yellow", hex: "#f2d98d" },
+  { name: "Cadmium Orange", hex: "#ed872d" },
+  { name: "Raw Sienna", hex: "#b07845" },
+  { name: "Burnt Umber", hex: "#5c3a21" },
+  { name: "Raw Umber", hex: "#6b4f36" },
+  { name: "Vermilion", hex: "#e34234" },
+  { name: "Magenta", hex: "#c9256e" },
+  { name: "Dioxazine Purple", hex: "#4b2d5e" },
+  { name: "Cobalt Blue", hex: "#1a4bb0" },
+  { name: "Phthalo Blue", hex: "#123f6d" },
+  { name: "Prussian Blue", hex: "#1c3a4c" },
+  { name: "Phthalo Green", hex: "#123f36" },
+  { name: "Viridian", hex: "#2e8b6f" },
+  { name: "Payne's Grey", hex: "#3b4650" },
 ];
 
 export interface RecipePart {
@@ -79,9 +99,12 @@ export function parseColorInput(raw: string): [number, number, number] | null {
 const MAX_PARTS = 4; // per-paint parts searched (ratios up to 4:1:1)
 const COMPLEXITY_PENALTY = 900; // prefer simpler recipes when scores are similar
 
-/** Find the closest paint recipe for a target color. Runs in a few ms. */
-export function solveRecipe(target: [number, number, number]): Recipe {
-  const n = BASE_PAINTS.length;
+/** Find the closest paint recipe for a target color from a paint set. Runs in a few ms. */
+export function solveRecipe(target: [number, number, number], paints: Paint[] = BASE_PAINTS): Recipe {
+  const set = paints.length ? paints : BASE_PAINTS;
+  const n = set.length;
+  // Triples explode combinatorially — only search them for a hand-sized kit.
+  const allowTriples = n <= 14;
   let best: { parts: RecipePart[]; rgb: [number, number, number]; d: number; score: number } | null =
     null;
 
@@ -89,14 +112,14 @@ export function solveRecipe(target: [number, number, number]): Recipe {
     // One paint isn't a mix — judge it by its actual color, not the RYB model.
     const rgb: [number, number, number] | null =
       idxs.length === 1
-        ? hexToRgb(BASE_PAINTS[idxs[0]].hex)
-        : mixPaints(idxs.map((pi, k) => ({ hex: BASE_PAINTS[pi].hex, parts: parts[k] })));
+        ? hexToRgb(set[idxs[0]].hex)
+        : mixPaints(idxs.map((pi, k) => ({ hex: set[pi].hex, parts: parts[k] })));
     if (!rgb) return;
     const d = dist(target, rgb);
     const score = d + COMPLEXITY_PENALTY * (idxs.length - 1);
     if (!best || score < best.score) {
       best = {
-        parts: idxs.map((pi, k) => ({ paint: BASE_PAINTS[pi], parts: parts[k] })),
+        parts: idxs.map((pi, k) => ({ paint: set[pi], parts: parts[k] })),
         rgb,
         d,
         score,
@@ -119,8 +142,8 @@ export function solveRecipe(target: [number, number, number]): Recipe {
     }
   }
 
-  // Triples
-  for (let a = 0; a < n; a++) {
+  // Triples (only for a hand-sized kit)
+  for (let a = 0; allowTriples && a < n; a++) {
     for (let b = a + 1; b < n; b++) {
       for (let c = b + 1; c < n; c++) {
         for (let pa = 1; pa <= MAX_PARTS; pa++) {
