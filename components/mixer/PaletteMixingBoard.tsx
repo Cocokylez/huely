@@ -358,10 +358,10 @@ export function PaletteMixingBoard() {
             className="palette-wood absolute inset-0 h-full w-full object-contain"
           />
 
-          <span className={`palette-brush-prop palette-brush-prop--left ${mixing ? "is-stirring" : ""}`} aria-hidden>
+          <span className={`palette-brush-prop palette-brush-prop--right ${mixing ? "is-stirring" : ""}`} aria-hidden>
             <Image src="/art/paint-brush.webp" alt="" width={900} height={900} draggable={false} />
           </span>
-          <span className="palette-brush-prop palette-brush-prop--right" aria-hidden>
+          <span className="palette-brush-prop palette-brush-prop--left" aria-hidden>
             <Image src="/art/paint-brush.webp" alt="" width={900} height={900} draggable={false} />
           </span>
 
