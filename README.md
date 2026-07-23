@@ -34,7 +34,7 @@ It is not another drawing app. Huely helps you put the phone down and put paint 
 | **01 · Choose** | Take a photo with the camera or pick one from your library. |
 | **02 · Fit** | Enter the real canvas size, choose portrait or landscape, then crop or fit the reference to that exact ratio. |
 | **03 · Study** | Switch between Original, Oil, Numbers, and Value views; zoom, pan, add a grid, or sample any color. |
-| **04 · Paint** | Follow the suggested paint order, mix target colors from beginner-friendly recipes, and mark finished areas as you go. |
+| **04 · Paint** | Follow the suggested order, drag tube colors onto the wooden palette, size the batch in mL, and mark finished areas as you go. |
 | **05 · Compare** | Photograph the physical canvas and inspect it beside, over, or split against the reference. |
 
 ## Built for the painting table
@@ -42,8 +42,8 @@ It is not another drawing app. Huely helps you put the phone down and put paint 
 | Canvas workspace | Paint Lab |
 | --- | --- |
 | Exact canvas dimensions and orientation | Dominant palette with HEX and RGB values |
-| Fill-frame or show-whole-photo fitting | Real-pigment-inspired RYB color mixing |
-| Touch zoom, pan, grid, guides, and flip | Paste a target color and get a mixing recipe |
+| Fill-frame or show-whole-photo fitting | Interactive wooden palette with draggable paint |
+| Touch zoom, pan, grid, guides, and flip | RYB recipes with exact parts and mL batch guides |
 | Oil, numbered, value, and original views | Save custom mixtures in **My Paints** |
 | Eyedropper and isolated-color inspection | Step-by-step depth, shadow, and highlight guidance |
 

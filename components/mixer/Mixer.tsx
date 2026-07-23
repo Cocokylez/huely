@@ -6,10 +6,11 @@ import { useMixSource, usePaintOrderSource } from "./mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Icon, type IconName } from "@/components/ui/Icon";
 import { nearestName } from "@/lib/image/colorNames";
-import { hexToRgb, rgbToHex } from "@/lib/image/color";
+import { rgbToHex } from "@/lib/image/color";
 import { parseColorInput, solveRecipe } from "@/lib/image/recipes";
 import { useMyPaints } from "./myPaints";
 import { MyPaintsEditor } from "./MyPaintsEditor";
+import { PaletteMixingBoard } from "./PaletteMixingBoard";
 
 type LabTab = "recipe" | "mix" | "paints";
 
@@ -20,14 +21,12 @@ const LAB_TABS: { id: LabTab; label: string; icon: IconName }[] = [
 ];
 
 export function Mixer() {
-  const { open, target, closeMixer } = useMixer();
-  const [tab, setTab] = useState<LabTab>("recipe");
+  const { open, closeMixer } = useMixer();
 
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    if (target) setTab("recipe");
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeMixer();
     };
@@ -36,9 +35,14 @@ export function Mixer() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [closeMixer, open, target]);
+  }, [closeMixer, open]);
 
   if (!open) return null;
+  return <PaintLabDialog closeMixer={closeMixer} />;
+}
+
+function PaintLabDialog({ closeMixer }: { closeMixer: () => void }) {
+  const [tab, setTab] = useState<LabTab>("recipe");
 
   return (
     <div className="fixed inset-0 z-[60] flex items-end justify-center md:items-center md:p-4">
@@ -106,7 +110,7 @@ export function Mixer() {
           {tab === "recipe" && (
             <RecipeLab onOpenMix={() => setTab("mix")} onOpenPaints={() => setTab("paints")} />
           )}
-          {tab === "mix" && <MixingBoard />}
+          {tab === "mix" && <PaletteMixingBoard />}
           {tab === "paints" && <PaintKit />}
         </div>
       </section>
@@ -125,11 +129,7 @@ function RecipeLab({ onOpenMix, onOpenPaints }: { onOpenMix: () => void; onOpenP
   const { toast } = useToast();
   const myPaints = useMyPaints();
   const projectPalette = useMixSource();
-  const [raw, setRaw] = useState("");
-
-  useEffect(() => {
-    if (target) setRaw(target);
-  }, [target]);
+  const [raw, setRaw] = useState(target ?? "");
 
   const parsed = useMemo(() => parseColorInput(raw), [raw]);
   const recipe = useMemo(() => (parsed ? solveRecipe(parsed, myPaints) : null), [parsed, myPaints]);
@@ -320,156 +320,6 @@ function PaintingOrder() {
           );
         })}
       </ol>
-    </section>
-  );
-}
-
-function MixingBoard() {
-  const { slots, result, removeSlot, setHex, setParts, addColor, clear } = useMixer();
-  const { toast } = useToast();
-
-  const copyResult = () => {
-    if (!result) return;
-    navigator.clipboard?.writeText(result.hex);
-    toast(`Copied ${result.hex}`);
-  };
-
-  return (
-    <div className="mx-auto grid max-w-2xl gap-4">
-      <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[var(--shadow-sm)]">
-        <div className="flex items-center gap-4">
-          <span
-            className="h-[72px] w-[72px] flex-none rounded-[20px] border border-black/10"
-            style={{ background: result?.hex ?? "var(--paper-2)" }}
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-soft)]">Your mixture</p>
-            <h3 className="truncate text-[17px] font-bold">{result?.name ?? "Add paint colors"}</h3>
-            <p className="text-[12px] text-[var(--ink-soft)]" style={{ fontFamily: "var(--mono)" }}>
-              {result ? result.hex : "No mixture yet"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={copyResult}
-            disabled={!result}
-            aria-label="Copy mixed color"
-            className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)] bg-[var(--paper-2)] text-[var(--ink-soft)] disabled:opacity-40"
-          >
-            <Icon name="copy" size={16} />
-          </button>
-        </div>
-      </section>
-
-      <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div>
-            <h3 className="text-[15px] font-bold">Paint parts</h3>
-            <p className="text-[11px] text-[var(--ink-soft)]">One part can be one brush-load, scoop, or drop.</p>
-          </div>
-          {slots.length > 0 && (
-            <button type="button" onClick={clear} className="text-[11px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]">
-              Clear all
-            </button>
-          )}
-        </div>
-
-        <div className="grid gap-2.5">
-          {slots.map((slot, index) => {
-            const [r, g, b] = hexToRgb(slot.hex);
-            return (
-              <div key={`${slot.hex}-${index}`} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card-2)] p-2.5">
-                <label className="relative h-11 w-11 flex-none cursor-pointer">
-                  <span className="block h-full w-full rounded-xl border border-black/10" style={{ background: slot.hex }} />
-                  <input
-                    type="color"
-                    value={slot.hex}
-                    onChange={(event) => setHex(index, event.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    aria-label={`Change ${nearestName(r, g, b)}`}
-                  />
-                </label>
-                <div className="min-w-0 flex-1">
-                  <b className="block truncate text-[12px]">{nearestName(r, g, b)}</b>
-                  <span className="font-mono text-[11px] text-[var(--ink-soft)]">{slot.hex.toUpperCase()}</span>
-                </div>
-                <div className="flex items-center rounded-full bg-[var(--paper-2)] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setParts(index, slot.parts - 1)}
-                    aria-label="Use fewer parts"
-                    className="grid h-8 w-8 place-items-center rounded-full hover:bg-[var(--card-2)]"
-                  >
-                    <Icon name="minus" size={14} />
-                  </button>
-                  <span className="min-w-6 text-center text-[13px] font-bold">{slot.parts}</span>
-                  <button
-                    type="button"
-                    onClick={() => setParts(index, slot.parts + 1)}
-                    aria-label="Use more parts"
-                    className="grid h-8 w-8 place-items-center rounded-full hover:bg-[var(--card-2)]"
-                  >
-                    <Icon name="plus" size={14} />
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeSlot(index)}
-                  aria-label="Remove paint color"
-                  className="grid h-9 w-9 flex-none place-items-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--accent)]"
-                >
-                  <Icon name="x" size={14} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        {slots.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-7 text-center text-[12px] text-[var(--ink-soft)]">
-            Add two or more paint colors to begin mixing.
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={() => addColor(slots[0]?.hex ?? "#7F7F7F")}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--line)] px-4 py-3 text-[12px] font-semibold text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-        >
-          <Icon name="plus" size={15} /> Add another paint
-        </button>
-      </section>
-
-      <ProjectMixColors />
-
-      <p className="rounded-xl bg-[var(--paper-2)] px-3.5 py-3 text-[11px] leading-relaxed text-[var(--ink-soft)]">
-        Digital recipes are a starting point. Mix a small test dab, compare it under the same light as your canvas, then adjust one part at a time.
-      </p>
-    </div>
-  );
-}
-
-function ProjectMixColors() {
-  const { addColor } = useMixer();
-  const palette = useMixSource();
-  if (!palette.length) return null;
-
-  return (
-    <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4">
-      <h3 className="text-[14px] font-bold">Add from this project</h3>
-      <p className="mb-3 text-[11px] text-[var(--ink-soft)]">Tap a palette color to add one part to the board.</p>
-      <div className="flex flex-wrap gap-2">
-        {palette.map((color, index) => (
-          <button
-            key={`${color.hex}-${index}`}
-            type="button"
-            onClick={() => addColor(color.hex)}
-            title={`Add ${color.hex.toUpperCase()}`}
-            className="h-10 w-10 rounded-xl border border-[var(--line)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
-            style={{ background: color.hex }}
-          />
-        ))}
-      </div>
     </section>
   );
 }

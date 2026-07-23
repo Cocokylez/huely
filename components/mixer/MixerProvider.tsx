@@ -57,7 +57,16 @@ export function MixerProvider({ children }: { children: React.ReactNode }) {
   const closeMixer = useCallback(() => setOpen(false), []);
 
   const addColor = useCallback((hex: string) => {
-    setSlots((prev) => (prev.length >= MAX_MIX_SLOTS ? prev : [...prev, { hex, parts: 1 }]));
+    const normalized = hex.toLowerCase();
+    setSlots((prev) => {
+      const existingIndex = prev.findIndex((slot) => slot.hex.toLowerCase() === normalized);
+      if (existingIndex >= 0) {
+        return prev.map((slot, index) =>
+          index === existingIndex ? { ...slot, parts: Math.min(9, slot.parts + 1) } : slot,
+        );
+      }
+      return prev.length >= MAX_MIX_SLOTS ? prev : [...prev, { hex: normalized, parts: 1 }];
+    });
     setOpen(true);
   }, []);
 

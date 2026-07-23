@@ -233,6 +233,260 @@ a {
   transform-origin: left center;
 }
 
+/* Paint Lab — tactile palette board */
+.paint-source-rail {
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+
+.paint-source-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.paint-source-rail > * {
+  scroll-snap-align: start;
+}
+
+.paint-source-daub,
+.paint-result-daub,
+.paint-mini-daub,
+.paint-drag-preview {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--paint) 72%, rgba(43, 39, 35, 0.24));
+  background:
+    radial-gradient(circle at 30% 22%, color-mix(in srgb, var(--paint) 52%, white) 0 7%, transparent 27%),
+    repeating-linear-gradient(
+      112deg,
+      color-mix(in srgb, var(--paint) 82%, white) 0 3px,
+      var(--paint) 4px 8px,
+      color-mix(in srgb, var(--paint) 82%, black) 9px 11px
+    );
+  box-shadow:
+    inset 0 4px 6px rgba(255, 255, 255, 0.24),
+    inset 0 -5px 8px rgba(35, 24, 15, 0.2),
+    0 3px 6px rgba(60, 45, 30, 0.16);
+}
+
+.paint-source-daub {
+  width: 42px;
+  height: 34px;
+  border-radius: 58% 42% 54% 46% / 45% 57% 43% 55%;
+  transform: rotate(-4deg);
+  transition: transform 160ms ease;
+}
+
+button:hover > .paint-source-daub {
+  transform: translateY(-2px) rotate(2deg) scale(1.04);
+}
+
+.paint-result-daub {
+  width: 58px;
+  height: 48px;
+  flex: none;
+  border-radius: 61% 39% 47% 53% / 46% 58% 42% 54%;
+  transform: rotate(-3deg);
+}
+
+.paint-mini-daub {
+  border-radius: 57% 43% 50% 50% / 45% 55% 45% 55%;
+  transform: rotate(-4deg);
+}
+
+.paint-drag-preview {
+  width: 54px;
+  height: 40px;
+  border-radius: 58% 42% 54% 46% / 45% 57% 43% 55%;
+  filter: drop-shadow(0 10px 12px rgba(43, 31, 20, 0.28));
+  transform: rotate(-7deg) scale(1.06);
+}
+
+.palette-drop-halo {
+  border: 2px dashed transparent;
+  background: color-mix(in srgb, var(--accent) 0%, transparent);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.palette-drop-halo.is-active {
+  border-color: color-mix(in srgb, var(--accent) 72%, white);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 7%, transparent);
+  transform: scale(0.98);
+}
+
+.palette-wood {
+  z-index: 1;
+  filter: drop-shadow(0 18px 18px rgba(67, 47, 29, 0.2));
+}
+
+.palette-paint-blob {
+  --blob-rotation: 0deg;
+  position: absolute;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--paint) 74%, rgba(43, 39, 35, 0.28));
+  border-radius: 61% 39% 48% 52% / 47% 56% 44% 53%;
+  background:
+    radial-gradient(circle at 31% 24%, color-mix(in srgb, var(--paint) 48%, white) 0 6%, transparent 25%),
+    repeating-linear-gradient(
+      108deg,
+      color-mix(in srgb, var(--paint) 86%, white) 0 3px,
+      var(--paint) 4px 8px,
+      color-mix(in srgb, var(--paint) 83%, black) 9px 12px
+    );
+  box-shadow:
+    inset 0 6px 8px rgba(255, 255, 255, 0.24),
+    inset 0 -8px 11px rgba(30, 20, 12, 0.2),
+    0 5px 8px rgba(62, 42, 24, 0.21);
+  transform: translate(-50%, -50%) rotate(var(--blob-rotation));
+  transition:
+    left 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 520ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 260ms ease 300ms,
+    transform 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: paint-blob-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.palette-paint-blob > span {
+  border-radius: 999px;
+  background: rgba(255, 253, 249, 0.82);
+  color: #40352b;
+  padding: 2px 5px;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(43, 31, 20, 0.16);
+  backdrop-filter: blur(3px);
+}
+
+.palette-paint-blob[data-gathered="true"] {
+  opacity: 0;
+  transform: translate(-50%, -50%) rotate(24deg) scale(0.3);
+}
+
+.palette-mixed-smear {
+  position: absolute;
+  top: 49%;
+  left: 48%;
+  z-index: 24;
+  width: 31%;
+  aspect-ratio: 1.45;
+  border: 1px solid color-mix(in srgb, var(--paint) 76%, rgba(43, 39, 35, 0.3));
+  border-radius: 62% 38% 54% 46% / 49% 58% 42% 51%;
+  background:
+    radial-gradient(circle at 34% 22%, color-mix(in srgb, var(--paint) 45%, white) 0 7%, transparent 27%),
+    repeating-linear-gradient(
+      104deg,
+      color-mix(in srgb, var(--paint) 85%, white) 0 4px,
+      var(--paint) 5px 10px,
+      color-mix(in srgb, var(--paint) 80%, black) 11px 14px
+    );
+  box-shadow:
+    inset 0 8px 11px rgba(255, 255, 255, 0.24),
+    inset 0 -10px 14px rgba(28, 18, 10, 0.23),
+    0 8px 12px rgba(62, 42, 24, 0.22);
+  transform: translate(-50%, -50%) rotate(-4deg);
+  animation: paint-mix-bloom 580ms cubic-bezier(0.15, 0.85, 0.2, 1) both;
+}
+
+.palette-mixed-smear.is-ready {
+  filter: saturate(1.02);
+}
+
+.palette-brush-prop {
+  position: absolute;
+  z-index: 8;
+  display: block;
+  aspect-ratio: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 10px 9px rgba(58, 38, 22, 0.2));
+  transform-origin: 26% 76%;
+}
+
+.palette-brush-prop img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.palette-brush-prop--left {
+  bottom: -2%;
+  left: -5%;
+  width: 40%;
+  transform: rotate(-32deg);
+}
+
+.palette-brush-prop--right {
+  top: 2%;
+  right: -4%;
+  width: 32%;
+  opacity: 0.48;
+  transform: scaleX(-1) rotate(-25deg);
+}
+
+.palette-brush-prop--left.is-stirring {
+  z-index: 32;
+  animation: palette-stir 720ms cubic-bezier(0.3, 0.7, 0.25, 1) both;
+}
+
+@keyframes paint-blob-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--blob-rotation)) scale(0.55);
+  }
+}
+
+@keyframes paint-mix-bloom {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-18deg) scale(0.28);
+  }
+  65% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(2deg) scale(1.06);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-4deg) scale(1);
+  }
+}
+
+@keyframes palette-stir {
+  0% {
+    transform: rotate(-32deg) translate(0, 0);
+  }
+  35% {
+    transform: rotate(9deg) translate(42%, -25%) scale(0.96);
+  }
+  68% {
+    transform: rotate(-7deg) translate(55%, -39%) scale(0.94);
+  }
+  100% {
+    transform: rotate(-32deg) translate(0, 0);
+  }
+}
+
+@media (max-width: 420px) {
+  .palette-brush-prop--left {
+    left: -3%;
+    width: 34%;
+    opacity: 0.78;
+  }
+
+  .palette-brush-prop--right {
+    right: -2%;
+    width: 27%;
+    opacity: 0.34;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
