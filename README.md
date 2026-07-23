@@ -13,6 +13,7 @@ Turn a photo into colors you can **paint by hand** — an oil-paint reference, t
 - **Eyedropper** — tap the image to grab any pixel's exact color.
 - **History** — save palettes; kept locally for guests, synced to your account when signed in.
 - **Device storage manager** — see cache usage, protect it from browser cleanup, or safely clear original and canvas-photo caches separately.
+- **Installable PWA** — add Huely to an Android or iPhone home screen and keep the guest-safe painting shell available offline.
 - All image processing runs **client-side in a Web Worker** — photos never leave your device.
 
 ## Stack
