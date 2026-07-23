@@ -97,23 +97,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       <div
         aria-hidden={!open}
-        className={`fixed inset-0 z-40 flex items-end justify-center px-3 pt-3 transition-[opacity,visibility] duration-200 ${
-          open ? "visible pointer-events-auto opacity-100" : "invisible pointer-events-none opacity-0"
+        className={`fixed inset-0 z-40 flex items-end justify-center px-3 pt-3 transition-opacity duration-150 will-change-[opacity] ${
+          open ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
         }`}
         style={{ paddingBottom: "calc(7.25rem + env(safe-area-inset-bottom))" }}
       >
         <button
           type="button"
           tabIndex={-1}
+          disabled={!open}
           aria-label="Close new project"
-          className="absolute inset-0 bg-[rgba(30,22,14,0.42)] backdrop-blur-[6px]"
+          className="absolute inset-0 bg-[rgba(30,22,14,0.42)] backdrop-blur-[3px]"
           onClick={closeCreate}
         />
         <section
           role="dialog"
           aria-labelledby="new-project-title"
-          className={`relative w-full max-w-sm origin-bottom rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.26)] transition-[transform,opacity] duration-300 ease-out ${
-            open ? "translate-y-0 scale-100 opacity-100" : "translate-y-5 scale-[0.97] opacity-0"
+          className={`relative w-full max-w-sm origin-bottom rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.26)] transition-[transform,opacity] duration-200 ease-out will-change-[transform,opacity] ${
+            open ? "translate-y-0 scale-100 opacity-100" : "translate-y-2 scale-[0.98] opacity-0"
           }`}
         >
           <div className="flex items-center gap-3">
@@ -125,6 +126,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             </div>
             <button
               type="button"
+              disabled={!open}
               onClick={closeCreate}
               aria-label="Close new project"
               className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
@@ -136,6 +138,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           <div className="mt-4 grid grid-cols-2 gap-2.5">
             <button
               type="button"
+              disabled={!open}
               onClick={() => cameraRef.current?.click()}
               className="flex min-h-[94px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[color-mix(in_srgb,var(--accent)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent)_8%,var(--card))] px-3 py-4 text-center text-[var(--ink)] transition hover:border-[var(--accent)] active:scale-[0.98]"
             >
@@ -146,6 +149,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             </button>
             <button
               type="button"
+              disabled={!open}
               onClick={() => galleryRef.current?.click()}
               className="flex min-h-[94px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[var(--line)] bg-[var(--card)] px-3 py-4 text-center text-[var(--ink)] transition hover:border-[var(--accent)] active:scale-[0.98]"
             >
