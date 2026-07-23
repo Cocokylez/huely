@@ -202,6 +202,37 @@ a {
   display: none;
 }
 
+.project-paint-track {
+  position: relative;
+  height: 7px;
+}
+
+.project-paint-track::before {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: var(--line);
+  opacity: 0.72;
+}
+
+.project-paint-fill {
+  position: relative;
+  display: block;
+  height: 7px;
+  clip-path: polygon(0 38%, 5% 20%, 92% 12%, 100% 38%, 96% 78%, 7% 90%, 0 68%);
+  background: linear-gradient(
+    90deg,
+    var(--accent-2),
+    color-mix(in srgb, var(--accent-2) 76%, var(--accent))
+  );
+  filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--accent-2) 24%, transparent));
+  transform: rotate(-0.2deg);
+  transform-origin: left center;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

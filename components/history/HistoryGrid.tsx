@@ -53,9 +53,11 @@ function groupProjectsByDate(projects: HistoryProject[]): ProjectGroup[] {
 }
 
 function PaletteStrip({ project }: { project: HistoryProject }) {
+  const swatches = project.palette.slice(0, 12);
+
   return (
-    <span className="flex h-2.5 overflow-hidden rounded-full border border-black/5" aria-hidden>
-      {project.palette.map((color, index) => (
+    <span className="flex h-1.5 flex-1 overflow-hidden rounded-[3px]" aria-hidden>
+      {swatches.map((color, index) => (
         <span key={`${color.hex}-${index}`} className="w-5 flex-1" style={{ background: color.hex }} />
       ))}
     </span>
@@ -65,7 +67,7 @@ function PaletteStrip({ project }: { project: HistoryProject }) {
 function CanvasBadge({ src }: { src?: string }) {
   if (!src) return null;
   return (
-    <span className="absolute bottom-2 right-2 grid h-12 w-12 overflow-hidden rounded-xl border-2 border-white bg-[var(--card)] shadow-md">
+    <span className="absolute bottom-3 right-3 grid h-10 w-10 overflow-hidden rounded-[10px] border-2 border-[var(--card-2)] bg-[var(--card)] shadow-md">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt="Latest canvas check-in" className="h-full w-full object-cover" />
       <span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded-full bg-black/60 text-white" aria-hidden>
@@ -125,44 +127,32 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
     <div className="space-y-5">
       <header className="pt-1">
         <h1 className="ui-page-title">Projects</h1>
+        {!loading && !error && items.length > 0 && (
+          <p className="mt-1.5 flex items-center gap-2 text-[12px] text-[var(--ink-soft)]">
+            <span>{items.length} {items.length === 1 ? "painting" : "paintings"}</span>
+            <span className="h-1 w-1 rounded-full bg-[var(--line)]" aria-hidden />
+            <span>{overallProgress}% complete</span>
+          </p>
+        )}
       </header>
 
-      {!loading && !error && items.length > 0 && (
-        <section
-          className="grid grid-cols-2 overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow-sm)]"
-          aria-label="Project summary"
-        >
-          <div className="flex min-h-[112px] flex-col items-center justify-center border-r border-[var(--line)] px-3 py-4 text-center">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--paper-2)] text-[var(--accent)]">
-              <Icon name="projects" size={15} />
-            </span>
-            <strong className="mt-2 text-[28px] font-bold leading-none tabular-nums">{items.length}</strong>
-            <span className="mt-1 text-[12px] font-medium text-[var(--ink-soft)]">
-              {items.length === 1 ? "Project" : "Projects"}
-            </span>
-          </div>
-          <div className="flex min-h-[112px] flex-col items-center justify-center px-3 py-4 text-center">
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--paper-2)] text-[var(--accent-2)]">
-              <Icon name="listCheck" size={15} />
-            </span>
-            <strong className="mt-2 text-[28px] font-bold leading-none tabular-nums">{overallProgress}%</strong>
-            <span className="mt-1 text-[12px] font-medium text-[var(--ink-soft)]">Colors complete</span>
-          </div>
-        </section>
-      )}
-
       {loading ? (
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="h-5 w-24 overflow-hidden rounded-full bg-[var(--paper-2)]">
             <div className="shimmer h-full w-full" />
           </div>
-          <div className="-mx-5 flex gap-3 overflow-hidden px-5 pb-2">
+          <div className="-mx-5 flex gap-4 overflow-hidden px-5 pb-2">
             {[0, 1].map((item) => (
-              <div
-                key={item}
-                className="h-[260px] w-[78vw] max-w-[270px] flex-none overflow-hidden rounded-[18px] bg-[var(--paper-2)]"
-              >
-                <div className="shimmer h-full w-full" />
+              <div key={item} className="w-[80vw] max-w-[296px] flex-none">
+                <div className="aspect-[4/3] overflow-hidden rounded-[20px] bg-[var(--paper-2)]">
+                  <div className="shimmer h-full w-full" />
+                </div>
+                <div className="mt-3 h-4 w-2/3 overflow-hidden rounded-full bg-[var(--paper-2)]">
+                  <div className="shimmer h-full w-full" />
+                </div>
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--paper-2)]">
+                  <div className="shimmer h-full w-full" />
+                </div>
               </div>
             ))}
           </div>
@@ -177,21 +167,17 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
           </div>
         </div>
       ) : items.length === 0 ? (
-        <section className="overflow-hidden rounded-[24px] border border-[var(--line)] bg-[var(--card)] text-center shadow-[var(--shadow-sm)]">
-          <div className="relative grid min-h-[190px] place-items-center bg-[var(--paper-2)] px-6">
-            <span className="absolute left-[12%] top-8 h-16 w-16 rounded-full bg-[var(--accent-soft)] opacity-45 blur-2xl" />
-            <span className="absolute bottom-5 right-[10%] h-20 w-20 rounded-full bg-[var(--accent-2)] opacity-20 blur-2xl" />
-            <span className="relative grid h-20 w-20 place-items-center rounded-[24px] border border-[var(--line)] bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow)]">
-              <Icon name="imagePlus" size={32} />
-            </span>
-          </div>
-          <div className="px-6 py-6">
-            <h2 className="ui-section-title">Start your first painting</h2>
-            <p className="ui-body mx-auto mt-2 max-w-sm text-[var(--ink-soft)]">
-              Add a photo to build your reference, palette, and painting order.
-            </p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-2)] px-4 py-2.5 text-[12px] font-semibold text-[var(--ink-soft)]">
-              <Icon name="plus" size={14} className="text-[var(--accent)]" /> Tap the center plus below
+        <section className="grid min-h-[52vh] place-items-center py-8 text-center">
+          <div>
+            <div className="relative mx-auto h-24 w-28" aria-hidden>
+              <span className="absolute left-2 top-3 h-20 w-20 -rotate-6 rounded-[18px] border border-[var(--line)] bg-[var(--paper-2)]" />
+              <span className="absolute right-1 top-1 grid h-20 w-20 rotate-3 place-items-center rounded-[18px] border border-[var(--line)] bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]">
+                <Icon name="imagePlus" size={29} />
+              </span>
+            </div>
+            <h2 className="ui-section-title mt-4">Your paintings will live here</h2>
+            <p className="ui-body mx-auto mt-2 max-w-[28ch] text-[var(--ink-soft)]">
+              Tap the center plus to begin with a photo.
             </p>
           </div>
         </section>
@@ -210,25 +196,23 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Find a project"
                 aria-label="Find a project"
-                className="w-full rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-[13px] outline-none placeholder:text-[var(--ink-soft)] focus:border-[var(--accent)]"
+                className="w-full rounded-[14px] border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-[13px] outline-none transition-colors placeholder:text-[var(--ink-soft)] focus:border-[var(--accent)]"
               />
             </label>
           </div>
 
           {projectGroups.length > 0 ? (
-            <div className="space-y-6">
+            <div className="space-y-7">
               {projectGroups.map((group) => (
                 <section key={group.key}>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <h2 className="text-[16px] font-bold">{group.label}</h2>
-                    <span className="text-[11px] text-[var(--ink-soft)]">
-                      {group.projects.length} {group.projects.length === 1 ? "project" : "projects"}
-                    </span>
+                  <div className="mb-3 flex items-center gap-3">
+                    <h2 className="text-[17px] font-bold tracking-[-0.01em]">{group.label}</h2>
+                    <span className="h-px flex-1 bg-[var(--line)]" aria-hidden />
                   </div>
                   <div
                     role="list"
                     aria-label={`${group.label} projects`}
-                    className="project-rail -mx-5 flex gap-3 overflow-x-auto pl-5 pr-10 pb-2 scroll-px-5"
+                    className="project-rail -mx-5 flex gap-4 overflow-x-auto pb-3 pl-5 pr-12 scroll-px-5"
                   >
                     {group.projects.map((project) => (
                       <ProjectCard
@@ -256,7 +240,7 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
           ) : (
             <div className="rounded-[18px] border border-dashed border-[var(--line)] px-5 py-10 text-center">
               <Icon name="search" size={24} className="mx-auto text-[var(--ink-soft)]" />
-              <p className="mt-2 text-[13px] font-bold">No project matches “{query}”</p>
+              <p className="mt-2 text-[13px] font-bold">No project matches &quot;{query}&quot;</p>
               <button type="button" onClick={() => setQuery("")} className="mt-2 text-[12px] font-semibold text-[var(--accent)]">
                 Clear search
               </button>
@@ -291,12 +275,17 @@ function ProjectCard({
   return (
     <article
       role="listitem"
-      className={`relative w-[78vw] max-w-[270px] flex-none snap-start overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow-sm)] ${
-        menuOpen ? "z-10" : ""
+      className={`relative w-[80vw] max-w-[296px] flex-none snap-start ${
+        menuOpen ? "z-20" : ""
       }`}
     >
-      <button type="button" onClick={onOpen} className="block w-full text-left" title={`Open ${displayName}`}>
-        <div className="relative aspect-[4/3] overflow-hidden bg-[var(--paper-2)]">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group block w-full text-left transition-transform duration-200 active:scale-[0.99]"
+        title={`Open ${displayName}`}
+      >
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[20px] border border-[var(--line)] bg-[var(--paper-2)] shadow-[var(--shadow-sm)] transition-shadow duration-200 group-hover:shadow-[var(--shadow)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={project.thumbDataUrl}
@@ -304,23 +293,34 @@ function ProjectCard({
             loading="lazy"
             decoding="async"
             draggable={false}
-            className="h-full w-full select-none object-cover transition duration-300 hover:scale-[1.02]"
+            className="h-full w-full select-none object-cover transition-transform duration-300 group-hover:scale-[1.025]"
           />
-          <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
-            {progress === 100 ? "Complete" : `${progress}%`}
-          </span>
           <CanvasBadge src={shot} />
         </div>
-        <div className="p-3">
-          <div className="pr-8">
-            <h3 className="truncate text-[14px] font-bold">{displayName}</h3>
-            <p className="mt-0.5 text-[11px] text-[var(--ink-soft)]">{project.palette.length} colors</p>
+        <div className="px-0.5 pt-3">
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="min-w-0 flex-1 truncate text-[15px] font-bold leading-tight tracking-[-0.01em]">
+              {displayName}
+            </h3>
+            <span className="flex-none text-[11px] font-semibold tabular-nums text-[var(--ink-soft)]">
+              {progress === 100 ? "Complete" : `${progress}%`}
+            </span>
           </div>
-          <div className="mt-2.5">
+          <div className="mt-2 flex items-center gap-2.5">
             <PaletteStrip project={project} />
+            <span className="flex-none text-[10px] font-medium text-[var(--ink-soft)]">
+              {project.palette.length} colors
+            </span>
           </div>
-          <div className="mt-2 h-1 overflow-hidden rounded-full bg-[var(--paper-2)]">
-            <div className="h-full rounded-full bg-[var(--accent-2)]" style={{ width: `${progress}%` }} />
+          <div
+            className="project-paint-track mt-2.5"
+            role="progressbar"
+            aria-label={`${displayName} progress`}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress}
+          >
+            <span className="project-paint-fill" style={{ width: `${progress}%` }} />
           </div>
         </div>
       </button>
@@ -330,13 +330,13 @@ function ProjectCard({
         aria-label={`Project options for ${displayName}`}
         aria-expanded={menuOpen}
         onClick={onMenu}
-        className="absolute bottom-[45px] right-2 grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] shadow-sm hover:text-[var(--ink)]"
+        className="absolute right-2.5 top-2.5 grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-black/50 text-white shadow-sm backdrop-blur-md transition-colors hover:bg-black/65"
       >
         <Icon name="more" size={17} />
       </button>
 
       {menuOpen && (
-        <div className="absolute bottom-[80px] right-2 z-10 w-[126px] rounded-xl border border-[var(--line)] bg-[var(--card-2)] p-1.5 shadow-[var(--shadow)]">
+        <div className="absolute right-2.5 top-12 z-10 w-[132px] rounded-xl border border-[var(--line)] bg-[var(--card-2)] p-1.5 shadow-[var(--shadow)]">
           <button type="button" onClick={onOpen} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-[11px] font-semibold hover:bg-[var(--paper-2)]">
             <Icon name="maximize" size={14} /> Open
           </button>
