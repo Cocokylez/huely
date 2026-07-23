@@ -17,8 +17,8 @@ export default async function SignupPage({
         <div className="text-4xl">📬</div>
         <h1 className="mt-3 text-[22px] font-extrabold tracking-[-0.02em]">Check your email</h1>
         <p className="mx-auto mt-2 max-w-[32ch] text-[14px] text-[var(--ink-soft)]">
-          We sent a confirmation link to <b className="text-[var(--ink)]">{pending}</b>. Click it,
-          then log in.
+          We sent a confirmation link to <b className="text-[var(--ink)]">{pending}</b>. Click it
+          to return to Huely.
         </p>
         <Link
           href="/login"

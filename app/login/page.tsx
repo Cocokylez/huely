@@ -7,9 +7,9 @@ const input =
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; email?: string; sent?: string }>;
+  searchParams: Promise<{ error?: string; email?: string; sent?: string; reset?: string }>;
 }) {
-  const { error, email, sent } = await searchParams;
+  const { error, email, sent, reset } = await searchParams;
   const unconfirmed = !!error && /confirm/i.test(error);
 
   return (
@@ -28,7 +28,17 @@ export default async function LoginPage({
         <p className="mt-4 rounded-xl border border-[var(--accent-2)] px-3.5 py-2.5 text-[13px] text-[var(--ink)]"
           style={{ background: "color-mix(in srgb, var(--accent-2) 8%, var(--card))" }}
         >
-          Confirmation email sent to <b>{sent}</b>. Click the link, then log in.
+          Confirmation email sent to <b>{sent}</b>. Click the link to return to Huely.
+        </p>
+      )}
+
+      {reset && (
+        <p
+          role="status"
+          className="mt-4 rounded-xl border border-[var(--accent-2)] px-3.5 py-2.5 text-[13px] text-[var(--ink)]"
+          style={{ background: "color-mix(in srgb, var(--accent-2) 8%, var(--card))" }}
+        >
+          Password updated. Log in with your new password.
         </p>
       )}
 
@@ -71,7 +81,12 @@ export default async function LoginPage({
           />
         </label>
         <label className="flex flex-col gap-1 text-[13px] font-semibold">
-          Password
+          <span className="flex items-center justify-between gap-3">
+            Password
+            <Link href="/forgot-password" className="text-[12px] font-semibold text-[var(--accent)]">
+              Forgot password?
+            </Link>
+          </span>
           <input
             type="password"
             name="password"

@@ -32,8 +32,11 @@ Runs in **guest mode** with local history and no accounts if Supabase isn't conf
 2. Copy `.env.example` → `.env.local` and fill in `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 3. Run [`supabase/schema.sql`](supabase/schema.sql) in the Supabase SQL editor (creates the `projects` table with row-level security).
 4. Restart `npm run dev`. Add the same two env vars in your Vercel project settings for production.
+5. In Supabase Authentication → URL Configuration, set the production Site URL and add
+   `https://your-app.vercel.app/auth/callback` to Redirect URLs. Optionally set
+   `NEXT_PUBLIC_SITE_URL` to the same production origin in Vercel.
 
-Auth is email + password with a display name (Google / magic-link can be added later).
+Auth is email + password with confirmation, resend, and password-reset flows.
 
 ## Project structure
 
