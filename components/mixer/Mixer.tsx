@@ -2,202 +2,138 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useMixer } from "./MixerProvider";
-import { useMixSource } from "./mixSource";
+import { useMixSource, usePaintOrderSource } from "./mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Icon, type IconName } from "@/components/ui/Icon";
 import { nearestName } from "@/lib/image/colorNames";
 import { hexToRgb, rgbToHex } from "@/lib/image/color";
 import { parseColorInput, solveRecipe } from "@/lib/image/recipes";
 import { useMyPaints } from "./myPaints";
 import { MyPaintsEditor } from "./MyPaintsEditor";
-import { Icon } from "@/components/ui/Icon";
 
-/**
- * Color Mixer — bottom sheet on mobile, 380px right side panel on ≥900px
- * (spec 02 · Toast & sheet; spec 03 · Mixer).
- */
+type LabTab = "recipe" | "mix" | "paints";
+
+const LAB_TABS: { id: LabTab; label: string; icon: IconName }[] = [
+  { id: "recipe", label: "Recipe", icon: "target" },
+  { id: "mix", label: "Mixing board", icon: "palette" },
+  { id: "paints", label: "My paints", icon: "brush" },
+];
+
+const TAB_COPY: Record<LabTab, string> = {
+  recipe: "Name or choose a color and get the tube-by-tube recipe.",
+  mix: "Adjust paint parts and watch the mixed pigment change.",
+  paints: "Tell Huely which tubes you own so every recipe is practical.",
+};
+
 export function Mixer() {
-  const { slots, open, result, closeMixer, removeSlot, setHex, setParts, addColor, clear } =
-    useMixer();
-  const { toast } = useToast();
+  const { open, target, closeMixer } = useMixer();
+  const [tab, setTab] = useState<LabTab>("recipe");
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && open) closeMixer();
+    if (!open) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    if (target) setTab("recipe");
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeMixer();
     };
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, closeMixer]);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [closeMixer, open, target]);
 
   if (!open) return null;
 
-  const copyResult = () => {
-    if (!result) return;
-    navigator.clipboard?.writeText(result.hex);
-    toast(`Copied ${result.hex}`);
-  };
-
   return (
-    <div className="fixed inset-0 z-[60] flex items-end justify-center min-[900px]:items-stretch min-[900px]:justify-end">
-      <div
-        className="absolute inset-0 bg-[rgba(30,22,14,0.45)]"
-        style={{ animation: "fade 0.2s ease" }}
+    <div className="fixed inset-0 z-[60] flex items-end justify-center md:items-center md:p-4">
+      <button
+        type="button"
+        tabIndex={-1}
+        aria-label="Close Paint Lab"
+        className="absolute inset-0 bg-[rgba(30,22,14,0.5)] backdrop-blur-[2px]"
         onClick={closeMixer}
-        aria-hidden
       />
-      <div
+      <section
         role="dialog"
         aria-modal="true"
-        aria-label="Color mixer"
-        className="relative flex max-h-[90dvh] w-full flex-col gap-4 overflow-y-auto rounded-t-[22px] bg-[var(--paper)] p-5 pb-8 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] min-[900px]:m-0 min-[900px]:max-h-none min-[900px]:w-[380px] min-[900px]:rounded-none min-[900px]:border-l min-[900px]:border-[var(--line)] min-[900px]:pb-5"
-        style={{ animation: "sheet-up 0.28s cubic-bezier(0.2,0.8,0.2,1)" }}
+        aria-labelledby="paint-lab-title"
+        className="relative flex h-[94dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-[26px] border border-[var(--line)] bg-[var(--paper)] shadow-[0_24px_80px_rgba(0,0,0,0.32)] md:h-[calc(100dvh-2rem)] md:max-h-[760px] md:rounded-[26px]"
+        style={{ animation: "sheet-up 0.26s cubic-bezier(0.2,0.8,0.2,1)" }}
       >
-        <div className="mx-auto h-1 w-9 rounded-full bg-[var(--line)] min-[900px]:hidden" aria-hidden />
+        <div className="mx-auto mt-2 h-1 w-9 rounded-full bg-[var(--line)] md:hidden" aria-hidden />
 
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-[21px] font-bold tracking-tight">Color Mixer</h2>
-            <p className="text-[13px] text-[var(--ink-soft)]">
-              Blend like real pigment. Name any shade.
-            </p>
+        <header className="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3.5 md:px-5">
+          <span className="grid h-10 w-10 flex-none place-items-center rounded-2xl bg-[var(--accent)] text-white">
+            <Icon name="palette" size={20} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 id="paint-lab-title" className="text-[19px] font-extrabold tracking-[-0.02em]">
+              Paint Lab
+            </h2>
+            <p className="truncate text-[11px] text-[var(--ink-soft)]">{TAB_COPY[tab]}</p>
           </div>
           <button
             type="button"
             onClick={closeMixer}
-            aria-label="Close"
-            className="grid h-[34px] w-[34px] place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95"
+            aria-label="Close Paint Lab"
+            className="grid h-10 w-10 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
-            <Icon name="x" size={16} />
+            <Icon name="x" size={17} />
           </button>
+        </header>
+
+        <nav
+          aria-label="Paint Lab sections"
+          className="grid grid-cols-3 gap-1 border-b border-[var(--line)] bg-[var(--card)]/60 px-3 py-2"
+        >
+          {LAB_TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={tab === item.id}
+              onClick={() => setTab(item.id)}
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition ${
+                tab === item.id
+                  ? "bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]"
+                  : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
+              }`}
+            >
+              <Icon name={item.icon} size={16} />
+              <span className="truncate">{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4 md:px-5 md:pt-5"
+          style={{ paddingBottom: "max(1.25rem, env(safe-area-inset-bottom))" }}
+        >
+          {tab === "recipe" && (
+            <RecipeLab onOpenMix={() => setTab("mix")} onOpenPaints={() => setTab("paints")} />
+          )}
+          {tab === "mix" && <MixingBoard />}
+          {tab === "paints" && <PaintKit />}
         </div>
-
-        <MatchColor />
-
-        {/* Result */}
-        <div className="flex items-center gap-3.5 rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5">
-          <div
-            className="h-[62px] w-[62px] flex-none rounded-xl border border-black/10"
-            style={{
-              background: result?.hex ?? "var(--paper-2)",
-              boxShadow: "inset 0 0 0 3px rgba(255,255,255,0.25)",
-            }}
-          />
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px] font-bold">{result?.name ?? "Add colors to mix"}</div>
-            <div className="text-[13px] text-[var(--ink-soft)]" style={{ fontFamily: "var(--mono)" }}>
-              {result
-                ? `${result.hex} · rgb(${result.rgb[0]}, ${result.rgb[1]}, ${result.rgb[2]})`
-                : "—"}
-            </div>
-          </div>
-          <button
-            onClick={copyResult}
-            disabled={!result}
-            className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95 disabled:opacity-45"
-          >
-            Copy
-          </button>
-        </div>
-
-        {/* Slots */}
-        <div className="flex flex-col gap-2">
-          {slots.map((s, i) => {
-            const [r, g, b] = hexToRgb(s.hex);
-            return (
-              <div
-                key={i}
-                className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--card)] p-2.5"
-              >
-                <label className="relative h-10 w-10 flex-none cursor-pointer">
-                  <span
-                    className="block h-full w-full rounded-[10px] border border-black/10"
-                    style={{ background: s.hex }}
-                  />
-                  <input
-                    type="color"
-                    value={s.hex}
-                    onChange={(e) => setHex(i, e.target.value)}
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    aria-label="Change color"
-                  />
-                </label>
-                <div className="min-w-0 flex-1 leading-tight">
-                  <div className="text-[13px]" style={{ fontFamily: "var(--mono)" }}>
-                    {s.hex.toUpperCase()}
-                  </div>
-                  <div className="text-[12px] text-[var(--ink-soft)]">{nearestName(r, g, b)}</div>
-                </div>
-                <div className="flex items-center gap-0.5 rounded-full bg-[var(--paper-2)] p-1">
-                  <button
-                    type="button"
-                    onClick={() => setParts(i, s.parts - 1)}
-                    aria-label="Fewer parts"
-                    className="grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold hover:bg-[var(--card-2)] hover:text-[var(--accent)]"
-                  >
-                    <Icon name="minus" size={15} />
-                  </button>
-                  <span className="min-w-5 text-center text-[13px] font-bold">{s.parts}</span>
-                  <button
-                    type="button"
-                    onClick={() => setParts(i, s.parts + 1)}
-                    aria-label="More parts"
-                    className="grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold hover:bg-[var(--card-2)] hover:text-[var(--accent)]"
-                  >
-                    <Icon name="plus" size={15} />
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeSlot(i)}
-                  aria-label="Remove color"
-                  className="grid h-7 w-7 flex-none place-items-center rounded-full text-[13px] text-[var(--ink-soft)] hover:text-[var(--accent)]"
-                >
-                  <Icon name="x" size={14} />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => addColor(slots[0]?.hex ?? "#7f7f7f")}
-            className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.98]"
-          >
-            + Add a color
-          </button>
-          <button
-            onClick={clear}
-            className="flex-1 rounded-xl border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[13px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.98]"
-          >
-            Clear
-          </button>
-        </div>
-
-        <MixSourceChips />
-
-        <p className="text-[12px] leading-relaxed text-[var(--ink-soft)]">
-          Mixing is subtractive, like real pigment — blue + yellow makes green. Use the minus and plus controls to change how many parts of each color go in.
-        </p>
-      </div>
+      </section>
     </div>
   );
 }
 
 const QUALITY_COPY = {
   "spot-on": "Spot on — this mix hits your color.",
-  close: "Close match — tweak parts to taste.",
-  closest: "Closest possible mix from a basic paint set.",
+  close: "Close match — tweak the parts after a small test dab.",
+  closest: "The closest mix available from the paints in your kit.",
 } as const;
 
-/** "Match a color" — paste any color, get the paint recipe to mix it. */
-function MatchColor() {
+function RecipeLab({ onOpenMix, onOpenPaints }: { onOpenMix: () => void; onOpenPaints: () => void }) {
   const { target, setTarget, loadSlots } = useMixer();
   const { toast } = useToast();
   const myPaints = useMyPaints();
+  const projectPalette = useMixSource();
   const [raw, setRaw] = useState("");
-  const [editPaints, setEditPaints] = useState(false);
 
-  // A target pushed from outside (eyedropper "Recipe" button) fills the field.
   useEffect(() => {
     if (target) setRaw(target);
   }, [target]);
@@ -206,134 +142,357 @@ function MatchColor() {
   const recipe = useMemo(() => (parsed ? solveRecipe(parsed, myPaints) : null), [parsed, myPaints]);
   const targetHex = parsed ? rgbToHex(parsed[0], parsed[1], parsed[2]).toUpperCase() : null;
 
-  const useMix = () => {
+  const chooseTarget = (hex: string) => {
+    const normalized = hex.toUpperCase();
+    setRaw(normalized);
+    setTarget(normalized);
+  };
+
+  const loadRecipe = () => {
     if (!recipe) return;
-    loadSlots(recipe.parts.map((p) => ({ hex: p.paint.hex, parts: p.parts })));
-    toast("Recipe loaded into the mixer");
+    loadSlots(recipe.parts.map((part) => ({ hex: part.paint.hex, parts: part.parts })));
+    toast("Recipe loaded into the mixing board");
+    onOpenMix();
   };
 
   return (
-    <div className="rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5">
-      <div className="mb-2.5 flex items-start justify-between gap-2">
-        <div>
-          <p className="text-[15px] font-bold">Match a color</p>
-          <p className="text-[12px] text-[var(--ink-soft)]">
-            Paste a color to find what to mix — from your paints.
-          </p>
+    <div className="mx-auto grid max-w-2xl gap-4">
+      <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4">
+        <div className="mb-3 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[15px] font-bold">What color are you trying to make?</p>
+            <p className="text-[12px] text-[var(--ink-soft)]">Paste a code, use the picker, or choose from this project.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenPaints}
+            className="flex flex-none items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[11px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
+          >
+            <Icon name="brush" size={14} /> {myPaints.length} paints
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditPaints((s) => !s)}
-          className="flex flex-none items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
-        >
-          <Icon name="palette" size={14} /> My paints ({myPaints.length})
-        </button>
-      </div>
 
-      {editPaints && <MyPaintsEditor onClose={() => setEditPaints(false)} />}
-
-      <div className="flex items-center gap-2">
-        <input
-          value={raw}
-          onChange={(e) => {
-            setRaw(e.target.value);
-            if (!e.target.value) setTarget(null);
-          }}
-          placeholder="#5A7A52 or rgb(90, 122, 82)"
-          spellCheck={false}
-          className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2.5 text-[14px] text-[var(--ink)] outline-none focus:border-[var(--accent)]"
-          style={{ fontFamily: "var(--mono)" }}
-          aria-label="Target color"
-        />
-        <label
-          className="relative h-[42px] w-[42px] flex-none cursor-pointer rounded-xl border border-[var(--line)]"
-          style={{ background: targetHex ?? "var(--paper-2)" }}
-          title="Pick a color"
-        >
+        <div className="flex items-center gap-2">
           <input
-            type="color"
-            value={targetHex ?? "#808080"}
-            onChange={(e) => setRaw(e.target.value.toUpperCase())}
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            aria-label="Pick target color"
+            value={raw}
+            onChange={(event) => {
+              setRaw(event.target.value);
+              if (!event.target.value) setTarget(null);
+            }}
+            placeholder="#5A7A52 or rgb(90, 122, 82)"
+            spellCheck={false}
+            className="min-w-0 flex-1 rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-3 text-[14px] text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+            style={{ fontFamily: "var(--mono)" }}
+            aria-label="Target color"
           />
-        </label>
-      </div>
+          <label
+            className="relative h-[46px] w-[46px] flex-none cursor-pointer rounded-xl border border-[var(--line)]"
+            style={{ background: targetHex ?? "var(--paper-2)" }}
+            title="Pick a target color"
+          >
+            <input
+              type="color"
+              value={targetHex ?? "#808080"}
+              onChange={(event) => chooseTarget(event.target.value)}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              aria-label="Pick target color"
+            />
+          </label>
+        </div>
 
-      {raw && !parsed && (
-        <p className="mt-2 text-[12px] text-[var(--accent)]">
-          That doesn&apos;t look like a color — try #RRGGBB.
-        </p>
-      )}
-
-      {recipe && targetHex && (
-        <div className="mt-3">
-          <div className="flex items-center gap-3">
-            <div className="flex flex-none flex-col items-center gap-1">
-              <span
-                className="h-[46px] w-[46px] rounded-[10px] border border-black/10"
-                style={{ background: targetHex }}
-              />
-              <span className="text-[10px] text-[var(--ink-soft)]">target</span>
-            </div>
-            <Icon name="arrowRight" size={17} className="text-[var(--ink-soft)]" />
-            <div className="flex flex-none flex-col items-center gap-1">
-              <span
-                className="h-[46px] w-[46px] rounded-[10px] border border-black/10"
-                style={{ background: recipe.hex }}
-              />
-              <span className="text-[10px] text-[var(--ink-soft)]">your mix</span>
-            </div>
-            <div className="min-w-0 flex-1">
-              {recipe.parts.map((p) => (
-                <div key={p.paint.name} className="flex items-center gap-2 py-0.5">
-                  <span
-                    className="h-4 w-4 flex-none rounded border border-black/10"
-                    style={{ background: p.paint.hex }}
-                  />
-                  <span className="truncate text-[13px]">
-                    <b>{p.parts}</b> × {p.paint.name}
-                  </span>
-                </div>
+        {projectPalette.length > 0 && (
+          <div className="mt-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-soft)]">
+              From this project
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {projectPalette.map((color, index) => (
+                <button
+                  key={`${color.hex}-${index}`}
+                  type="button"
+                  onClick={() => chooseTarget(color.hex)}
+                  aria-label={`Find a recipe for ${color.hex.toUpperCase()}`}
+                  className="h-9 w-9 rounded-xl border border-[var(--line)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
+                  style={{ background: color.hex }}
+                />
               ))}
             </div>
           </div>
-          <div className="mt-2.5 flex items-center justify-between gap-2">
-            <span className="text-[12px] text-[var(--ink-soft)]">{QUALITY_COPY[recipe.quality]}</span>
+        )}
+
+        {raw && !parsed && (
+          <p role="alert" className="mt-2 text-[12px] text-[var(--accent)]">
+            That does not look like a color. Try a six-digit hex code such as #5A7A52.
+          </p>
+        )}
+      </section>
+
+      {recipe && targetHex ? (
+        <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[var(--shadow-sm)]">
+          <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
+            <div className="text-center">
+              <span className="block h-14 w-14 rounded-2xl border border-black/10" style={{ background: targetHex }} />
+              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Target</span>
+            </div>
+            <Icon name="arrowRight" size={20} className="justify-self-center text-[var(--ink-soft)]" />
+            <div className="text-center">
+              <span className="block h-14 w-14 rounded-2xl border border-black/10" style={{ background: recipe.hex }} />
+              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Recipe</span>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2">
+            {recipe.parts.map((part) => (
+              <div key={part.paint.name} className="flex items-center gap-3 rounded-xl bg-[var(--paper-2)] px-3 py-2.5">
+                <span className="h-7 w-7 flex-none rounded-lg border border-black/10" style={{ background: part.paint.hex }} />
+                <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">{part.paint.name}</span>
+                <span className="rounded-full bg-[var(--card-2)] px-2.5 py-1 text-[12px] font-bold">
+                  {part.parts} {part.parts === 1 ? "part" : "parts"}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-col gap-3 border-t border-[var(--line)] pt-3 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-[12px] text-[var(--ink-soft)]">{QUALITY_COPY[recipe.quality]}</p>
             <button
-              onClick={useMix}
-              className="flex-none rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95"
+              type="button"
+              onClick={loadRecipe}
+              className="flex items-center justify-center gap-2 rounded-xl bg-[var(--accent)] px-4 py-3 text-[12px] font-semibold text-white active:scale-[0.98]"
             >
-              Use this mix
+              <Icon name="palette" size={15} /> Load mixing board
             </button>
           </div>
+        </section>
+      ) : (
+        <div className="rounded-[20px] border border-dashed border-[var(--line)] px-5 py-8 text-center text-[12px] text-[var(--ink-soft)]">
+          <Icon name="target" size={24} className="mx-auto mb-2 text-[var(--accent)]" />
+          Choose a target color to reveal its real-paint recipe.
         </div>
       )}
+
+      <PaintingOrder />
     </div>
   );
 }
 
-/** "From your palette" chips — fed by the studio via the mixSource store. */
-function MixSourceChips() {
+function PaintingOrder() {
+  const steps = usePaintOrderSource();
+  if (!steps.length) return null;
+
+  return (
+    <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4">
+      <div className="mb-3 flex items-start gap-3">
+        <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[color-mix(in_srgb,var(--accent)_12%,var(--card))] text-[var(--accent)]">
+          <Icon name="listCheck" size={17} />
+        </span>
+        <div>
+          <h3 className="text-[15px] font-bold">Painting order for this photo</h3>
+          <p className="text-[11px] leading-relaxed text-[var(--ink-soft)]">
+            Huely starts with the largest area, builds depth from dark to light, then saves small details for last.
+          </p>
+        </div>
+      </div>
+
+      <ol className="grid gap-2">
+        {steps.map((step, order) => {
+          const colorName = nearestName(step.color.r, step.color.g, step.color.b);
+          const coverage = Math.max(1, Math.round(step.coverage * 100));
+          return (
+            <li
+              key={`${step.index}-${order}`}
+              className="grid grid-cols-[32px_38px_1fr] items-start gap-2.5 rounded-2xl bg-[var(--card-2)] p-2.5"
+            >
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--ink)] text-[11px] font-extrabold text-[var(--paper)]">
+                {order + 1}
+              </span>
+              <span
+                className="mt-0.5 h-9 w-9 rounded-xl border border-black/10"
+                style={{ background: step.color.hex }}
+                aria-hidden
+              />
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+                  <p className="truncate text-[12px] font-bold">
+                    {step.label}: {colorName}
+                  </p>
+                  <span className="text-[10px] font-semibold text-[var(--ink-soft)]">about {coverage}%</span>
+                </div>
+                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                  {step.color.hex.toUpperCase()}
+                </p>
+                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-soft)]">{step.tip}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function MixingBoard() {
+  const { slots, result, removeSlot, setHex, setParts, addColor, clear } = useMixer();
+  const { toast } = useToast();
+
+  const copyResult = () => {
+    if (!result) return;
+    navigator.clipboard?.writeText(result.hex);
+    toast(`Copied ${result.hex}`);
+  };
+
+  return (
+    <div className="mx-auto grid max-w-2xl gap-4">
+      <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[var(--shadow-sm)]">
+        <div className="flex items-center gap-4">
+          <span
+            className="h-[72px] w-[72px] flex-none rounded-[20px] border border-black/10"
+            style={{ background: result?.hex ?? "var(--paper-2)" }}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-soft)]">Your mixture</p>
+            <h3 className="truncate text-[18px] font-extrabold">{result?.name ?? "Add paint colors"}</h3>
+            <p className="text-[12px] text-[var(--ink-soft)]" style={{ fontFamily: "var(--mono)" }}>
+              {result ? result.hex : "No mixture yet"}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={copyResult}
+            disabled={!result}
+            aria-label="Copy mixed color"
+            className="grid h-10 w-10 place-items-center rounded-full border border-[var(--line)] bg-[var(--paper-2)] text-[var(--ink-soft)] disabled:opacity-40"
+          >
+            <Icon name="copy" size={16} />
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="text-[15px] font-bold">Paint parts</h3>
+            <p className="text-[11px] text-[var(--ink-soft)]">One part can be one brush-load, scoop, or drop.</p>
+          </div>
+          {slots.length > 0 && (
+            <button type="button" onClick={clear} className="text-[11px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]">
+              Clear all
+            </button>
+          )}
+        </div>
+
+        <div className="grid gap-2.5">
+          {slots.map((slot, index) => {
+            const [r, g, b] = hexToRgb(slot.hex);
+            return (
+              <div key={`${slot.hex}-${index}`} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card-2)] p-2.5">
+                <label className="relative h-11 w-11 flex-none cursor-pointer">
+                  <span className="block h-full w-full rounded-xl border border-black/10" style={{ background: slot.hex }} />
+                  <input
+                    type="color"
+                    value={slot.hex}
+                    onChange={(event) => setHex(index, event.target.value)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    aria-label={`Change ${nearestName(r, g, b)}`}
+                  />
+                </label>
+                <div className="min-w-0 flex-1">
+                  <b className="block truncate text-[12px]">{nearestName(r, g, b)}</b>
+                  <span className="font-mono text-[10px] text-[var(--ink-soft)]">{slot.hex.toUpperCase()}</span>
+                </div>
+                <div className="flex items-center rounded-full bg-[var(--paper-2)] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setParts(index, slot.parts - 1)}
+                    aria-label="Use fewer parts"
+                    className="grid h-8 w-8 place-items-center rounded-full hover:bg-[var(--card-2)]"
+                  >
+                    <Icon name="minus" size={14} />
+                  </button>
+                  <span className="min-w-6 text-center text-[13px] font-bold">{slot.parts}</span>
+                  <button
+                    type="button"
+                    onClick={() => setParts(index, slot.parts + 1)}
+                    aria-label="Use more parts"
+                    className="grid h-8 w-8 place-items-center rounded-full hover:bg-[var(--card-2)]"
+                  >
+                    <Icon name="plus" size={14} />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeSlot(index)}
+                  aria-label="Remove paint color"
+                  className="grid h-9 w-9 flex-none place-items-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--accent)]"
+                >
+                  <Icon name="x" size={14} />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {slots.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-7 text-center text-[12px] text-[var(--ink-soft)]">
+            Add two or more paint colors to begin mixing.
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={() => addColor(slots[0]?.hex ?? "#7F7F7F")}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--line)] px-4 py-3 text-[12px] font-semibold text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        >
+          <Icon name="plus" size={15} /> Add another paint
+        </button>
+      </section>
+
+      <ProjectMixColors />
+
+      <p className="rounded-xl bg-[var(--paper-2)] px-3.5 py-3 text-[11px] leading-relaxed text-[var(--ink-soft)]">
+        Digital recipes are a starting point. Mix a small test dab, compare it under the same light as your canvas, then adjust one part at a time.
+      </p>
+    </div>
+  );
+}
+
+function ProjectMixColors() {
   const { addColor } = useMixer();
   const palette = useMixSource();
   if (!palette.length) return null;
+
   return (
-    <div>
-      <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-soft)]">
-        From your palette
-      </p>
+    <section className="rounded-[20px] border border-[var(--line)] bg-[var(--card)] p-4">
+      <h3 className="text-[14px] font-bold">Add from this project</h3>
+      <p className="mb-3 text-[11px] text-[var(--ink-soft)]">Tap a palette color to add one part to the board.</p>
       <div className="flex flex-wrap gap-2">
-        {palette.map((c, i) => (
+        {palette.map((color, index) => (
           <button
-            key={`${c.hex}-${i}`}
-            onClick={() => addColor(c.hex)}
-            title={`Add ${c.hex.toUpperCase()} to mix`}
-            className="h-[30px] w-[30px] rounded-lg border border-[var(--line)] transition hover:scale-110"
-            style={{ background: c.hex }}
+            key={`${color.hex}-${index}`}
+            type="button"
+            onClick={() => addColor(color.hex)}
+            title={`Add ${color.hex.toUpperCase()}`}
+            className="h-10 w-10 rounded-xl border border-[var(--line)] transition hover:-translate-y-0.5 hover:shadow-[var(--shadow-sm)]"
+            style={{ background: color.hex }}
           />
         ))}
       </div>
+    </section>
+  );
+}
+
+function PaintKit() {
+  const myPaints = useMyPaints();
+  return (
+    <div className="mx-auto max-w-2xl">
+      <div className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4">
+        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--accent)]">Your physical kit</p>
+        <h3 className="mt-1 text-[18px] font-extrabold">Recipes built from paints you own</h3>
+        <p className="mt-1 text-[12px] leading-relaxed text-[var(--ink-soft)]">
+          Huely currently has {myPaints.length} tubes available. Remove paints you do not own and add custom colors from your own brand.
+        </p>
+      </div>
+      <MyPaintsEditor />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "@/lib/history/save";
 import { imageDataToThumb } from "@/lib/image/thumbnail";
 import { nearestName } from "@/lib/image/colorNames";
+import { buildPaintingSteps } from "@/lib/image/paintingSteps";
 import {
   downloadImageData,
   printGuide,
@@ -126,7 +127,7 @@ export function StudioClient({ authed, openId }: Props) {
   }, [openId, openProject]);
 
   useEffect(() => {
-    if (result) setMixSource(result.palette);
+    if (result) setMixSource(result.palette, buildPaintingSteps(result.palette, result.index));
   }, [result]);
   useEffect(() => {
     if (!result || guideCheckedRef.current) return;

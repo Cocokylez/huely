@@ -6,7 +6,7 @@ import { useMyPaints, getMyPaints, setMyPaints, togglePaint, resetMyPaints } fro
 import { Icon } from "@/components/ui/Icon";
 
 /** Inline editor to pick the tubes you own (recipes solve against these). */
-export function MyPaintsEditor({ onClose }: { onClose: () => void }) {
+export function MyPaintsEditor({ onClose }: { onClose?: () => void }) {
   const mine = useMyPaints();
   const has = (p: Paint) => mine.some((m) => m.name === p.name);
   const custom = mine.filter((m) => !PAINT_CATALOG.some((c) => c.name === m.name));
@@ -47,12 +47,15 @@ export function MyPaintsEditor({ onClose }: { onClose: () => void }) {
           <p className="text-[15px] font-bold">My paints</p>
           <p className="text-[12px] text-[var(--ink-soft)]">{mine.length} tubes · recipes use only these</p>
         </div>
-        <button
-          onClick={onClose}
-          className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)]"
-        >
-          Done
-        </button>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+          >
+            Done
+          </button>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-1.5">
