@@ -73,6 +73,12 @@ const PATHS = {
       <path d="M12 7v5l3.5 2" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 5 5" />
+    </>
+  ),
   grid: (
     <>
       <rect x="3.5" y="3.5" width="17" height="17" rx="1.5" />
