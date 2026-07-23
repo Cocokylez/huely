@@ -2,6 +2,8 @@ import type { HistoryProject } from "./types";
 import {
   localSave,
   localGet,
+  localList,
+  localRemoveProjectRecord,
   saveSource,
   getSource,
   removeSource,
@@ -9,7 +11,48 @@ import {
   getShot,
   removeShot,
 } from "./local";
-import { cloudSave, cloudUpdate, cloudGet, cloudUpdateDone } from "./cloud";
+import { cloudSave, cloudUpdate, cloudGet, cloudList, cloudUpdateDone } from "./cloud";
+
+export interface GuestMigrationResult {
+  moved: number;
+  alreadyCloud: number;
+  failed: number;
+}
+
+/**
+ * Copy guest projects into the signed-in account, then remove only their local
+ * metadata. Device-only source images and canvas photos deliberately remain in
+ * IndexedDB and keep the same project id, so full-resolution reopen still works.
+ *
+ * A project is never removed locally until its cloud copy is confirmed. Calling
+ * this repeatedly is safe: ids already present in the account are simply cleaned
+ * out of the guest list.
+ */
+export async function migrateGuestProjects(): Promise<GuestMigrationResult> {
+  const guestProjects = await localList();
+  if (!guestProjects.length) return { moved: 0, alreadyCloud: 0, failed: 0 };
+
+  const cloudIds = new Set((await cloudList()).map((project) => project.id));
+  const result: GuestMigrationResult = { moved: 0, alreadyCloud: 0, failed: 0 };
+
+  for (const project of guestProjects) {
+    try {
+      if (cloudIds.has(project.id)) {
+        result.alreadyCloud += 1;
+      } else {
+        await cloudSave(project);
+        cloudIds.add(project.id);
+        result.moved += 1;
+      }
+      await localRemoveProjectRecord(project.id);
+    } catch {
+      // Preserve the guest record so a later login/page load can retry safely.
+      result.failed += 1;
+    }
+  }
+
+  return result;
+}
 
 /** Save a new project — cloud when signed in, local IndexedDB otherwise. */
 export async function saveProject(authed: boolean, project: HistoryProject): Promise<void> {

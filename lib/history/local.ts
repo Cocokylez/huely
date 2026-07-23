@@ -96,6 +96,17 @@ export async function localRemove(id: string): Promise<void> {
   await db.delete("shots", id).catch(() => {});
 }
 
+/**
+ * Remove only the guest project record after it has been copied to the cloud.
+ * Keep the full-resolution source and canvas photo on this device: cloud
+ * history intentionally stores thumbnails only, and these caches are what make
+ * a reopened project crisp on the device where it was created.
+ */
+export async function localRemoveProjectRecord(id: string): Promise<void> {
+  const db = await getDb();
+  await db.delete("projects", id);
+}
+
 export async function localRename(id: string, name: string): Promise<void> {
   const db = await getDb();
   const existing = await db.get("projects", id);

@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/ui/ToastProvider";
 import { MixerProvider } from "@/components/mixer/MixerProvider";
 import { Mixer } from "@/components/mixer/Mixer";
 import { Navbar } from "@/components/Navbar";
+import { GuestProjectMigration } from "@/components/history/GuestProjectMigration";
 import { getUser } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
@@ -30,6 +31,7 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-full flex-col">
         <ToastProvider>
+          <GuestProjectMigration authed={Boolean(user)} />
           <MixerProvider>
             <Navbar user={navUser} />
             <main className="mx-auto w-full max-w-xl flex-1 px-5 pb-10 pt-6">{children}</main>

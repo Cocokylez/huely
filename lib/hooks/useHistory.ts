@@ -28,6 +28,12 @@ export function useHistory(authed: boolean) {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const handleHistoryChange = () => refresh();
+    window.addEventListener("huely-history-changed", handleHistoryChange);
+    return () => window.removeEventListener("huely-history-changed", handleHistoryChange);
+  }, [refresh]);
+
   const remove = useCallback(
     async (id: string) => {
       if (authed) await cloudRemove(id);
