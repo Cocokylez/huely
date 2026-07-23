@@ -4,22 +4,52 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useHistory } from "@/lib/hooks/useHistory";
 import { getShot } from "@/lib/history/local";
+import { displayProjectName } from "@/lib/history/name";
 import type { HistoryProject } from "@/lib/history/types";
 import { Icon } from "@/components/ui/Icon";
 
-type ProjectSort = "recent" | "progress" | "oldest";
+interface ProjectGroup {
+  key: string;
+  label: string;
+  projects: HistoryProject[];
+}
 
 function progressFor(project: HistoryProject): number {
   if (!project.palette.length) return 0;
   return Math.min(100, Math.round((new Set(project.done).size / project.palette.length) * 100));
 }
 
-function startedLabel(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString(undefined, {
+function calendarKey(date: Date): string {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function projectDateLabel(timestamp: number): string {
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const key = calendarKey(date);
+  if (key === calendarKey(today)) return "Today";
+  if (key === calendarKey(yesterday)) return "Yesterday";
+
+  return date.toLocaleDateString(undefined, {
+    weekday: "long",
     month: "short",
     day: "numeric",
-    year: new Date(timestamp).getFullYear() === new Date().getFullYear() ? undefined : "numeric",
+    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric",
   });
+}
+
+function groupProjectsByDate(projects: HistoryProject[]): ProjectGroup[] {
+  const groups: ProjectGroup[] = [];
+  for (const project of projects) {
+    const key = calendarKey(new Date(project.createdAt));
+    const previous = groups[groups.length - 1];
+    if (previous?.key === key) previous.projects.push(project);
+    else groups.push({ key, label: projectDateLabel(project.createdAt), projects: [project] });
+  }
+  return groups;
 }
 
 function PaletteStrip({ project }: { project: HistoryProject }) {
@@ -51,7 +81,6 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
   const router = useRouter();
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<ProjectSort>("recent");
   const [shots, setShots] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -76,15 +105,13 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
   const visible = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     const filtered = normalized
-      ? items.filter((project) => project.name.toLowerCase().includes(normalized))
+      ? items.filter((project) => displayProjectName(project.name).toLowerCase().includes(normalized))
       : [...items];
 
-    return filtered.sort((a, b) => {
-      if (sort === "progress") return progressFor(b) - progressFor(a) || b.createdAt - a.createdAt;
-      if (sort === "oldest") return a.createdAt - b.createdAt;
-      return b.createdAt - a.createdAt;
-    });
-  }, [items, query, sort]);
+    return filtered.sort((a, b) => b.createdAt - a.createdAt);
+  }, [items, query]);
+
+  const projectGroups = useMemo(() => groupProjectsByDate(visible), [visible]);
 
   const completedSteps = items.reduce(
     (total, project) => total + Math.min(new Set(project.done).size, project.palette.length),
@@ -92,9 +119,6 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
   );
   const totalSteps = items.reduce((total, project) => total + project.palette.length, 0);
   const overallProgress = totalSteps ? Math.round((completedSteps / totalSteps) * 100) : 0;
-  const featured = visible[0];
-  const remaining = visible.slice(1);
-
   const openProject = (id: string) => router.push(`/studio?open=${encodeURIComponent(id)}`);
 
   return (
@@ -128,13 +152,16 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
       )}
 
       {loading ? (
-        <div className="grid gap-3">
-          <div className="h-[260px] overflow-hidden rounded-[22px] bg-[var(--paper-2)]">
+        <div className="space-y-3">
+          <div className="h-5 w-24 overflow-hidden rounded-full bg-[var(--paper-2)]">
             <div className="shimmer h-full w-full" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="-mx-5 flex gap-3 overflow-hidden px-5 pb-2">
             {[0, 1].map((item) => (
-              <div key={item} className="h-[190px] overflow-hidden rounded-[18px] bg-[var(--paper-2)]">
+              <div
+                key={item}
+                className="h-[260px] w-[78vw] max-w-[270px] flex-none overflow-hidden rounded-[18px] bg-[var(--paper-2)]"
+              >
                 <div className="shimmer h-full w-full" />
               </div>
             ))}
@@ -170,8 +197,8 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
         </section>
       ) : (
         <>
-          <div className="flex items-center gap-2">
-            <label className="relative min-w-0 flex-1">
+          <div>
+            <label className="relative block">
               <Icon
                 name="search"
                 size={16}
@@ -186,80 +213,24 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                 className="w-full rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-[13px] outline-none placeholder:text-[var(--ink-soft)] focus:border-[var(--accent)]"
               />
             </label>
-            <label className="relative flex-none">
-              <select
-                value={sort}
-                onChange={(event) => setSort(event.target.value as ProjectSort)}
-                aria-label="Sort projects"
-                className="appearance-none rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-3 pr-8 text-[12px] font-semibold outline-none focus:border-[var(--accent)]"
-              >
-                <option value="recent">Newest</option>
-                <option value="progress">Progress</option>
-                <option value="oldest">Oldest</option>
-              </select>
-              <Icon
-                name="chevronDown"
-                size={13}
-                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]"
-              />
-            </label>
           </div>
 
-          {featured ? (
-            <>
-              <section>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <h2 className="text-[15px] font-bold">Continue painting</h2>
-                  <span className="text-[11px] text-[var(--ink-soft)]">{startedLabel(featured.createdAt)}</span>
-                </div>
-                <article className="overflow-hidden rounded-[22px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow)]">
-                  <div className="grid sm:grid-cols-[1.15fr_0.85fr]">
-                    <div className="relative min-h-[190px] bg-[var(--paper-2)] sm:min-h-[230px]">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={featured.thumbDataUrl} alt={featured.name} className="absolute inset-0 h-full w-full object-cover" />
-                      <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/45 to-transparent" />
-                      <CanvasBadge src={shots[featured.id]} />
-                    </div>
-                    <div className="flex flex-col p-4">
-                      <p className="text-[11px] font-semibold text-[var(--accent)]">
-                        {progressFor(featured) === 100 ? "Painting complete" : "In progress"}
-                      </p>
-                      <h3 className="mt-1 truncate text-[18px] font-bold tracking-[-0.015em]">{featured.name}</h3>
-                      <p className="mt-1 text-[12px] text-[var(--ink-soft)]">
-                        {featured.palette.length} palette colors · {new Set(featured.done).size} finished
-                      </p>
-                      <div className="mt-3">
-                        <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-[var(--ink-soft)]">
-                          <span>Painting progress</span>
-                          <span>{progressFor(featured)}%</span>
-                        </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-[var(--paper-2)]">
-                          <div className="h-full rounded-full bg-[var(--accent-2)]" style={{ width: `${progressFor(featured)}%` }} />
-                        </div>
-                      </div>
-                      <div className="mt-3">
-                        <PaletteStrip project={featured} />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => openProject(featured.id)}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-4 py-3 text-[13px] font-semibold text-[var(--paper)]"
-                      >
-                        Open workspace <Icon name="arrowRight" size={15} />
-                      </button>
-                    </div>
+          {projectGroups.length > 0 ? (
+            <div className="space-y-6">
+              {projectGroups.map((group) => (
+                <section key={group.key}>
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <h2 className="text-[16px] font-bold">{group.label}</h2>
+                    <span className="text-[11px] text-[var(--ink-soft)]">
+                      {group.projects.length} {group.projects.length === 1 ? "project" : "projects"}
+                    </span>
                   </div>
-                </article>
-              </section>
-
-              {remaining.length > 0 && (
-                <section>
-                  <div className="mb-2 flex items-center justify-between">
-                    <h2 className="text-[15px] font-bold">All projects</h2>
-                    <span className="text-[11px] text-[var(--ink-soft)]">{remaining.length} more</span>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
-                    {remaining.map((project) => (
+                  <div
+                    role="list"
+                    aria-label={`${group.label} projects`}
+                    className="project-rail -mx-5 flex gap-3 overflow-x-auto pl-5 pr-10 pb-2 scroll-px-5"
+                  >
+                    {group.projects.map((project) => (
                       <ProjectCard
                         key={project.id}
                         project={project}
@@ -269,19 +240,19 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                         onMenu={() => setMenuFor(menuFor === project.id ? null : project.id)}
                         onRename={() => {
                           setMenuFor(null);
-                          const next = window.prompt("Rename project", project.name);
+                          const next = window.prompt("Rename project", displayProjectName(project.name));
                           if (next?.trim()) void rename(project.id, next.trim());
                         }}
                         onDelete={() => {
                           setMenuFor(null);
-                          if (window.confirm(`Delete "${project.name}"?`)) void remove(project.id);
+                          if (window.confirm(`Delete "${displayProjectName(project.name)}"?`)) void remove(project.id);
                         }}
                       />
                     ))}
                   </div>
                 </section>
-              )}
-            </>
+              ))}
+            </div>
           ) : (
             <div className="rounded-[18px] border border-dashed border-[var(--line)] px-5 py-10 text-center">
               <Icon name="search" size={24} className="mx-auto text-[var(--ink-soft)]" />
@@ -316,23 +287,34 @@ function ProjectCard({
   onDelete: () => void;
 }) {
   const progress = progressFor(project);
+  const displayName = displayProjectName(project.name);
   return (
-    <article className="relative overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow-sm)]">
-      <button type="button" onClick={onOpen} className="block w-full text-left" title={`Open ${project.name}`}>
+    <article
+      role="listitem"
+      className={`relative w-[78vw] max-w-[270px] flex-none snap-start overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow-sm)] ${
+        menuOpen ? "z-10" : ""
+      }`}
+    >
+      <button type="button" onClick={onOpen} className="block w-full text-left" title={`Open ${displayName}`}>
         <div className="relative aspect-[4/3] overflow-hidden bg-[var(--paper-2)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={project.thumbDataUrl} alt={project.name} className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]" />
+          <img
+            src={project.thumbDataUrl}
+            alt={displayName}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            className="h-full w-full select-none object-cover transition duration-300 hover:scale-[1.02]"
+          />
           <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
-            {progress}% done
+            {progress === 100 ? "Complete" : `${progress}%`}
           </span>
           <CanvasBadge src={shot} />
         </div>
         <div className="p-3">
           <div className="pr-8">
-            <h3 className="truncate text-[14px] font-bold">{project.name}</h3>
-            <p className="mt-0.5 text-[11px] text-[var(--ink-soft)]">
-              {startedLabel(project.createdAt)} · {project.palette.length} colors
-            </p>
+            <h3 className="truncate text-[14px] font-bold">{displayName}</h3>
+            <p className="mt-0.5 text-[11px] text-[var(--ink-soft)]">{project.palette.length} colors</p>
           </div>
           <div className="mt-2.5">
             <PaletteStrip project={project} />
@@ -345,7 +327,7 @@ function ProjectCard({
 
       <button
         type="button"
-        aria-label={`Project options for ${project.name}`}
+        aria-label={`Project options for ${displayName}`}
         aria-expanded={menuOpen}
         onClick={onMenu}
         className="absolute bottom-[45px] right-2 grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] shadow-sm hover:text-[var(--ink)]"

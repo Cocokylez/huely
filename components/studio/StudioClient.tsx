@@ -6,6 +6,7 @@ import { usePipeline } from "@/lib/hooks/usePipeline";
 import { COLOR_COUNT_OPTIONS } from "@/lib/image/constants";
 import type { ViewMode } from "@/lib/image/types";
 import type { HistoryProject } from "@/lib/history/types";
+import { displayProjectName, UNTITLED_PROJECT_NAME } from "@/lib/history/name";
 import {
   saveProject,
   updateProject,
@@ -39,14 +40,6 @@ import { FocusWorkspace } from "./FocusWorkspace";
 import { PaintingSteps } from "./PaintingSteps";
 import { CanvasShot } from "./CanvasShot";
 import { BeginnerGuide, shouldShowBeginnerGuide } from "./BeginnerGuide";
-
-function defaultName() {
-  return (
-    new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
-    " · " +
-    new Date().toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
-  );
-}
 
 interface Props {
   authed: boolean;
@@ -86,6 +79,7 @@ export function StudioClient({ authed, openId }: Props) {
 
   const [projectId, setProjectId] = useState<string | null>(null);
   const [name, setName] = useState<string>("");
+  const [projectCreatedAt, setProjectCreatedAt] = useState(() => Date.now());
   const [saved, setSaved] = useState(false);
   const [editing, setEditing] = useState(false);
   const pendingSaveRef = useRef<"new" | "update" | null>(null);
@@ -97,6 +91,7 @@ export function StudioClient({ authed, openId }: Props) {
       try {
         const p = await getProject(authed, id);
         if (!p) return;
+        setProjectCreatedAt(p.createdAt);
         setMixSource(p.palette);
         if (p.mixer.length) loadSlots(p.mixer);
 
@@ -105,7 +100,7 @@ export function StudioClient({ authed, openId }: Props) {
           // Full-res: reconstruct the whole workspace from the device-cached image.
           setRestored(null);
           setProjectId(p.id);
-          setName(p.name);
+          setName(displayProjectName(p.name));
           setSaved(true);
           setDone(new Set(p.done));
           setFocusColor(null);
@@ -153,7 +148,8 @@ export function StudioClient({ authed, openId }: Props) {
     const thumb = imageDataToThumb(result.oil);
     thumbRef.current = thumb;
     const id = kind === "new" ? crypto.randomUUID() : projectId!;
-    const nm = kind === "new" ? defaultName() : name;
+    const nm = kind === "new" ? UNTITLED_PROJECT_NAME : name;
+    const createdAt = kind === "new" ? Date.now() : projectCreatedAt;
 
     const project: HistoryProject = {
       id,
@@ -163,7 +159,7 @@ export function StudioClient({ authed, openId }: Props) {
       mixer: slots,
       done: kind === "new" ? [] : [...done],
       thumbDataUrl: thumb,
-      createdAt: Date.now(),
+      createdAt,
     };
 
     (kind === "new" ? saveProject(authed, project) : updateProject(authed, project))
@@ -171,6 +167,7 @@ export function StudioClient({ authed, openId }: Props) {
         if (kind === "new") {
           setProjectId(id);
           setName(nm);
+          setProjectCreatedAt(createdAt);
           setDone(new Set());
           // Cache the full working-res source on-device for full-res reopen.
           cacheSource(id, imageDataToJpegDataUrl(result.original));
@@ -192,6 +189,8 @@ export function StudioClient({ authed, openId }: Props) {
       setGuideOpen(false);
       openWorkspaceOnReadyRef.current = true;
       setProjectId(null);
+      setName(UNTITLED_PROJECT_NAME);
+      setProjectCreatedAt(Date.now());
       setSaved(false);
       pendingSaveRef.current = "new";
       process(file);
@@ -258,7 +257,7 @@ export function StudioClient({ authed, openId }: Props) {
         mixer: slots,
         done: [...done],
         thumbDataUrl: thumbRef.current || imageDataToThumb(result.oil),
-        createdAt: Date.now(),
+        createdAt: projectCreatedAt,
       });
     } catch {
       toast("Couldn't rename");
