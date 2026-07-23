@@ -35,6 +35,7 @@ import { RestoredProject } from "./RestoredProject";
 import { FocusWorkspace } from "./FocusWorkspace";
 import { PaintingSteps } from "./PaintingSteps";
 import { CanvasShot } from "./CanvasShot";
+import { BeginnerGuide, shouldShowBeginnerGuide } from "./BeginnerGuide";
 
 function defaultName() {
   return (
@@ -73,6 +74,8 @@ export function StudioClient({ authed, openId }: Props) {
   const [done, setDone] = useState<Set<number>>(new Set());
   const [focusColor, setFocusColor] = useState<number | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
+  const guideCheckedRef = useRef(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -122,6 +125,11 @@ export function StudioClient({ authed, openId }: Props) {
   useEffect(() => {
     if (result) setMixSource(result.palette);
   }, [result]);
+  useEffect(() => {
+    if (!result || guideCheckedRef.current) return;
+    guideCheckedRef.current = true;
+    if (shouldShowBeginnerGuide()) setGuideOpen(true);
+  }, [result]);
   useEffect(() => () => setMixSource([]), []);
 
   // Auto-save on process; update on re-quantize.
@@ -169,6 +177,7 @@ export function StudioClient({ authed, openId }: Props) {
       setDone(new Set());
       setFocusColor(null);
       setFocusMode(false);
+      setGuideOpen(false);
       setProjectId(null);
       setSaved(false);
       pendingSaveRef.current = "new";
@@ -243,6 +252,7 @@ export function StudioClient({ authed, openId }: Props) {
     setDone(new Set());
     setFocusColor(null);
     setFocusMode(false);
+    setGuideOpen(false);
     setProjectId(null);
     setSaved(false);
     reset();
@@ -301,10 +311,17 @@ export function StudioClient({ authed, openId }: Props) {
 
   return (
     <div>
+      <BeginnerGuide
+        open={guideOpen}
+        onClose={() => setGuideOpen(false)}
+        onOpenWorkspace={() => setFocusMode(true)}
+      />
+
       <div className="mb-2 flex items-center justify-between gap-3">
         {editing ? (
           <input
             autoFocus
+            aria-label="Project name"
             defaultValue={name}
             onBlur={(e) => commitRename(e.target.value)}
             onKeyDown={(e) => {
@@ -315,15 +332,19 @@ export function StudioClient({ authed, openId }: Props) {
           />
         ) : (
           <button
+            type="button"
             onClick={() => setEditing(true)}
             title="Rename"
+            aria-label={`Rename project ${name || "Untitled"}`}
             className="flex min-w-0 items-center gap-1.5 text-left"
           >
             <b className="truncate text-[15px]">{name || "Untitled"}</b>
             <span className="text-[12px] text-[var(--ink-soft)]">✎</span>
           </button>
         )}
-        <span className="flex-none text-[12px] text-[var(--ink-soft)]">{saved ? "Saved ✓" : ""}</span>
+        <span role="status" aria-live="polite" className="flex-none text-[12px] text-[var(--ink-soft)]">
+          {saved ? "Saved ✓" : ""}
+        </span>
       </div>
 
       {focusMode && (
@@ -347,8 +368,19 @@ export function StudioClient({ authed, openId }: Props) {
           <ViewSwitcher view={view} onChange={setView} />
         </div>
         <button
+          type="button"
+          onClick={() => setGuideOpen(true)}
+          title="Beginner guide"
+          aria-label="Open beginner painting guide"
+          className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[13px] font-bold text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        >
+          ?
+        </button>
+        <button
+          type="button"
           onClick={() => setFocusMode(true)}
           title="Focus workspace"
+          aria-label="Open full-screen painting workspace"
           className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
           ⤢
@@ -427,7 +459,15 @@ export function StudioClient({ authed, openId }: Props) {
 
         {/* Progress */}
         <div className="mb-3 flex items-center gap-3">
-          <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--paper-2)]">
+          <div
+            role="progressbar"
+            aria-label="Painting colors completed"
+            aria-valuemin={0}
+            aria-valuemax={total}
+            aria-valuenow={doneCount}
+            aria-valuetext={`${doneCount} of ${total} colors done`}
+            className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--paper-2)]"
+          >
             <div
               className="h-full rounded-full bg-[var(--accent-2)] transition-all"
               style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}

@@ -15,12 +15,12 @@ interface Props {
 
 export function ViewSwitcher({ view, onChange }: Props) {
   return (
-    <div className="flex gap-1 rounded-full bg-[var(--paper-2)] p-[3px]" role="tablist">
+    <div className="flex gap-1 rounded-full bg-[var(--paper-2)] p-[3px]" role="group" aria-label="Reference view">
       {VIEWS.map((v) => (
         <button
           key={v.id}
-          role="tab"
-          aria-selected={view === v.id}
+          type="button"
+          aria-pressed={view === v.id}
           onClick={() => onChange(v.id)}
           className={`flex-1 rounded-full px-2 py-2 text-[13px] font-semibold transition ${
             view === v.id

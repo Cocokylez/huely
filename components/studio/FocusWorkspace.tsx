@@ -96,12 +96,14 @@ export function FocusWorkspace(props: Props) {
             </span>
           </div>
           <button
+            type="button"
             onClick={props.onDoneNext}
             className="flex-none rounded-full bg-[var(--accent-2)] px-2.5 py-1.5 text-[11px] font-semibold text-white active:scale-95"
           >
             Done · next
           </button>
           <button
+            type="button"
             onClick={props.onClearFocus}
             className="flex-none rounded-full border border-[var(--line)] bg-[var(--card-2)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--ink-soft)]"
           >
@@ -111,7 +113,15 @@ export function FocusWorkspace(props: Props) {
       )}
 
       <div className="mb-3 flex items-center gap-3">
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--paper-2)]">
+        <div
+          role="progressbar"
+          aria-label="Painting colors completed"
+          aria-valuemin={0}
+          aria-valuemax={total}
+          aria-valuenow={doneCount}
+          aria-valuetext={`${doneCount} of ${total} colors done`}
+          className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--paper-2)]"
+        >
           <div
             className="h-full rounded-full bg-[var(--accent-2)] transition-all"
             style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}
@@ -122,11 +132,17 @@ export function FocusWorkspace(props: Props) {
         </span>
       </div>
 
-      <div className="mb-3 flex gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px]">
+      <div
+        role="group"
+        aria-label="Color panel"
+        className="mb-3 flex gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px]"
+      >
         {(["colors", "steps"] as const).map((t) => (
           <button
             key={t}
+            type="button"
             onClick={() => setPanelTab(t)}
+            aria-pressed={panelTab === t}
             className={`flex-1 rounded-full py-1.5 text-[12px] font-semibold capitalize transition ${
               panelTab === t
                 ? "bg-[var(--card-2)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
@@ -160,10 +176,15 @@ export function FocusWorkspace(props: Props) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--paper)]">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Painting workspace"
+      className="fixed inset-0 z-50 flex flex-col bg-[var(--paper)]"
+    >
       {/* Minimal top bar; mobile controls live in the shared bottom dock. */}
       <div className="flex items-center gap-2 border-b border-[var(--line)] px-2.5 py-2">
-        <button onClick={onExit} title="Exit focus (Esc)" aria-label="Exit workspace" className={iconBtn}>
+        <button type="button" autoFocus onClick={onExit} title="Exit focus (Esc)" aria-label="Exit workspace" className={iconBtn}>
           ✕
         </button>
         <div className="min-w-0 flex-1 text-center md:hidden">
@@ -172,11 +193,17 @@ export function FocusWorkspace(props: Props) {
             {currentView.label} · {displayWidth}×{displayHeight}
           </span>
         </div>
-        <div className="mx-auto hidden gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px] md:flex">
+        <div
+          role="group"
+          aria-label="Reference view"
+          className="mx-auto hidden gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px] md:flex"
+        >
           {VIEWS.map(({ id, short }) => (
             <button
               key={id}
+              type="button"
               onClick={() => onView(id)}
+              aria-pressed={view === id}
               className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
                 view === id
                   ? "bg-[var(--card-2)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
@@ -190,7 +217,7 @@ export function FocusWorkspace(props: Props) {
         <span className="min-w-9 flex-none text-center text-[11px] font-semibold text-[var(--ink-soft)] md:hidden">
           {doneCount}/{total}
         </span>
-        <button onClick={openMixer} title="Color mixer" aria-label="Open color mixer" className={`${iconBtn} hidden md:grid`}>
+        <button type="button" onClick={openMixer} title="Color mixer" aria-label="Open color mixer" className={`${iconBtn} hidden md:grid`}>
           🎨
         </button>
       </div>
@@ -222,8 +249,8 @@ export function FocusWorkspace(props: Props) {
       </div>
 
       {sampled && !mobileSheet && !mixerOpen && (
-        <div className="fixed bottom-[76px] left-1/2 z-[53] flex -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 pl-2 shadow-[var(--shadow)] backdrop-blur md:bottom-4 md:left-4 md:translate-x-0">
-          <span className="h-6 w-6 rounded-full border border-black/10" style={{ background: sampled }} />
+        <div role="status" className="fixed bottom-[76px] left-1/2 z-[53] flex -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 pl-2 shadow-[var(--shadow)] backdrop-blur md:bottom-4 md:left-4 md:translate-x-0">
+          <span aria-hidden className="h-6 w-6 rounded-full border border-black/10" style={{ background: sampled }} />
           <b className="font-mono text-[11px]">{sampled}</b>
           <button
             type="button"
@@ -257,6 +284,7 @@ export function FocusWorkspace(props: Props) {
           />
           <section
             role="dialog"
+            aria-modal="true"
             aria-label={
               mobileSheet === "views"
                 ? "Choose reference view"
@@ -286,13 +314,12 @@ export function FocusWorkspace(props: Props) {
             </div>
 
             {mobileSheet === "views" && (
-              <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Reference view">
+              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Reference view">
                 {VIEWS.map(({ id, label }) => (
                   <button
                     key={id}
                     type="button"
-                    role="tab"
-                    aria-selected={view === id}
+                    aria-pressed={view === id}
                     onClick={() => {
                       onView(id);
                       setMobileSheet(null);

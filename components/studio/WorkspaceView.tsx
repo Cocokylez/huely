@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { rgbToHex } from "@/lib/image/color";
 
 interface Props {
@@ -89,6 +89,8 @@ export function WorkspaceTools({
         <button
           type="button"
           onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
+          aria-pressed={gridN > 0}
+          aria-label={gridN > 0 ? `Grid ${gridN} is on. Choose the next grid size` : "Turn on a painting grid"}
           className={toolChip(gridN > 0, panel)}
           title="Grid method — divide the reference into cells"
         >
@@ -97,6 +99,8 @@ export function WorkspaceTools({
         <button
           type="button"
           onClick={() => setGuides((g) => (g + 1) % 4)}
+          aria-pressed={guides > 0}
+          aria-label={guides > 0 ? `${GUIDE_LABELS[guides]} are on. Choose the next guide` : "Turn on composition guides"}
           className={toolChip(guides > 0, panel)}
           title="Composition guides"
         >
@@ -105,6 +109,8 @@ export function WorkspaceTools({
         <button
           type="button"
           onClick={() => setGray((g) => !g)}
+          aria-pressed={gray}
+          aria-label={gray ? "Turn off value study" : "Turn on value study"}
           className={toolChip(gray, panel)}
           title="Value / grayscale study"
         >
@@ -113,6 +119,8 @@ export function WorkspaceTools({
         <button
           type="button"
           onClick={() => setShowAdjust((s) => !s)}
+          aria-expanded={showAdjust}
+          aria-label={showAdjust ? "Close image adjustments" : "Open image adjustments"}
           className={toolChip(showAdjust || adjusted, panel)}
           title="Brightness / contrast / saturation"
         >
@@ -121,6 +129,8 @@ export function WorkspaceTools({
         <button
           type="button"
           onClick={() => setFlip((f) => !f)}
+          aria-pressed={flip}
+          aria-label={flip ? "Restore the original image direction" : "Flip the image horizontally"}
           className={toolChip(flip, panel)}
           title="Flip horizontally to spot errors"
         >
@@ -183,6 +193,8 @@ export function WorkspaceView({
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
   const containerRef = useRef<HTMLDivElement>(null);
+  const instructionsId = useId();
+  const zoomStatusId = useId();
 
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
@@ -238,6 +250,37 @@ export function WorkspaceView({
     setScale(1);
     setTx(0);
     setTy(0);
+  };
+
+  const panBy = (x: number, y: number) => {
+    const next = clampPan(scale, tx + x, ty + y);
+    setTx(next.x);
+    setTy(next.y);
+  };
+
+  const onWorkspaceKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const centerX = el.clientWidth / 2;
+    const centerY = el.clientHeight / 2;
+
+    if (event.key === "+" || event.key === "=") {
+      event.preventDefault();
+      zoomAt(centerX, centerY, 1.4);
+    } else if (event.key === "-" || event.key === "_") {
+      event.preventDefault();
+      zoomAt(centerX, centerY, 1 / 1.4);
+    } else if (event.key === "0" || event.key === "Home") {
+      event.preventDefault();
+      resetZoom();
+    } else if (scale > 1 && event.key.startsWith("Arrow")) {
+      event.preventDefault();
+      const step = event.shiftKey ? 80 : 32;
+      if (event.key === "ArrowLeft") panBy(step, 0);
+      if (event.key === "ArrowRight") panBy(-step, 0);
+      if (event.key === "ArrowUp") panBy(0, step);
+      if (event.key === "ArrowDown") panBy(0, -step);
+    }
   };
 
   const relPoint = (clientX: number, clientY: number) => {
@@ -347,6 +390,12 @@ export function WorkspaceView({
 
   return (
     <div>
+      <p id={instructionsId} className="sr-only">
+        Interactive painting reference. Tap or click the image to identify a color. Use plus and minus to zoom, arrow keys to pan while zoomed, and zero to reset.
+      </p>
+      <p id={zoomStatusId} className="sr-only">
+        Current zoom {Math.round(scale * 100)} percent.
+      </p>
       {toolbar !== "hidden" && (
         <div className={toolbar === "desktop-only" ? "hidden md:block" : undefined}>
           <WorkspaceTools tools={workspaceTools} />
@@ -356,6 +405,10 @@ export function WorkspaceView({
       <div className="relative">
         <div
           ref={containerRef}
+          role="region"
+          tabIndex={0}
+          aria-label="Interactive painting reference"
+          aria-describedby={`${instructionsId} ${zoomStatusId}`}
           className="relative overflow-hidden rounded-[14px] bg-[var(--paper-2)]"
           style={{
             aspectRatio: `${width} / ${height}`,
@@ -366,6 +419,7 @@ export function WorkspaceView({
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
+          onKeyDown={onWorkspaceKeyDown}
         >
           <div
             className="absolute inset-0"
@@ -376,7 +430,7 @@ export function WorkspaceView({
                 ref={ref}
                 className="absolute inset-0 h-full w-full"
                 style={{ imageRendering: "auto", filter: filterStr }}
-                aria-label="Your image"
+                aria-hidden
               />
               {lines.length > 0 && (
                 <svg
@@ -405,31 +459,39 @@ export function WorkspaceView({
           </div>
         </div>
 
-        <div className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1 shadow-[var(--shadow-sm)]">
+        <div
+          role="group"
+          aria-label="Image zoom controls"
+          className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1 shadow-[var(--shadow-sm)]"
+        >
           <button
+            type="button"
             onClick={() => {
               const el = containerRef.current!;
               zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1 / 1.4);
             }}
             aria-label="Zoom out"
-            className="grid h-7 w-7 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+            className="grid h-9 w-9 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
           >
             −
           </button>
           <button
+            type="button"
             onClick={resetZoom}
-            className="min-w-[42px] rounded-full px-2 text-[11px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+            aria-label={`Reset zoom, currently ${Math.round(scale * 100)} percent`}
+            className="min-h-9 min-w-[48px] rounded-full px-2 text-[11px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)]"
             title="Reset zoom"
           >
             {Math.round(scale * 100)}%
           </button>
           <button
+            type="button"
             onClick={() => {
               const el = containerRef.current!;
               zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1.4);
             }}
             aria-label="Zoom in"
-            className="grid h-7 w-7 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+            className="grid h-9 w-9 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
           >
             ＋
           </button>

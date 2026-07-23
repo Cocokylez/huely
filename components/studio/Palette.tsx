@@ -2,6 +2,7 @@
 
 import type { PaletteColor } from "@/lib/image/types";
 import { luminance } from "@/lib/image/color";
+import { nearestName } from "@/lib/image/colorNames";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { useToast } from "@/components/ui/ToastProvider";
 
@@ -30,6 +31,7 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
         const dark = luminance(c) > 140;
         const isDone = !!done?.has(i);
         const isFocus = focus === i;
+        const name = nearestName(c.r, c.g, c.b);
         return (
           <div
             key={`${hex}-${i}`}
@@ -42,8 +44,10 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
             } bg-[var(--card-2)]`}
           >
             <button
+              type="button"
               onClick={() => copy(hex)}
               title={`Copy ${hex}`}
+              aria-label={`Color ${i + 1}, ${name}, ${hex}. Copy color code`}
               className="group relative h-[66px] w-full"
               style={{ background: c.hex }}
             >
@@ -61,17 +65,19 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
                   ✓
                 </span>
               )}
-              <span className="absolute bottom-1.5 right-[7px] rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
+              <span aria-hidden className="absolute bottom-1.5 right-[7px] rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
                 copy
               </span>
             </button>
 
             {onFocus && (
               <button
+                type="button"
                 onClick={() => onFocus(i)}
                 aria-pressed={isFocus}
+                aria-label={isFocus ? `Show every color instead of ${name}` : `Show only color ${i + 1}, ${name}`}
                 title={isFocus ? "Show all colors" : "Paint just this color"}
-                className={`absolute right-[7px] top-[7px] grid h-[22px] w-[22px] place-items-center rounded-full border text-[11px] transition ${
+                className={`absolute right-[6px] top-[6px] grid h-8 w-8 place-items-center rounded-full border text-[12px] transition ${
                   isFocus
                     ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                     : "border-white/60 bg-black/25 text-white hover:bg-[var(--accent)]"
@@ -91,17 +97,21 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
             </div>
             <div className="flex border-t border-[var(--line)]">
               <button
+                type="button"
                 onClick={() => addColor(c.hex)}
-                className="flex-1 py-1.5 text-[11px] font-bold text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--accent)]"
+                aria-label={`Add color ${i + 1}, ${name}, to the mixer`}
+                className="min-h-9 flex-1 py-1.5 text-[11px] font-bold text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--accent)]"
               >
                 + Mixer
               </button>
               {onToggleDone && (
                 <button
+                  type="button"
                   onClick={() => onToggleDone(i)}
                   aria-pressed={isDone}
+                  aria-label={isDone ? `Mark color ${i + 1}, ${name}, not done` : `Mark color ${i + 1}, ${name}, done`}
                   title={isDone ? "Mark not done" : "Mark done"}
-                  className={`grid w-9 place-items-center border-l border-[var(--line)] text-[13px] font-bold transition ${
+                  className={`grid min-h-9 w-10 place-items-center border-l border-[var(--line)] text-[13px] font-bold transition ${
                     isDone
                       ? "bg-[var(--accent-2)] text-white"
                       : "text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--accent-2)]"

@@ -76,10 +76,12 @@ export function PaintingSteps({ palette, index, done, onToggleDone, focus, onFoc
                   </span>
                 </div>
                 <button
+                  type="button"
                   onClick={() => onToggleDone(s.index)}
                   aria-pressed={isDone}
+                  aria-label={isDone ? `Mark ${s.label} not done` : `Mark ${s.label} done`}
                   title={isDone ? "Mark not done" : "Mark done"}
-                  className={`grid h-8 w-8 flex-none place-items-center rounded-full border text-[13px] font-bold transition ${
+                  className={`grid h-9 w-9 flex-none place-items-center rounded-full border text-[13px] font-bold transition ${
                     isDone
                       ? "border-[var(--accent-2)] bg-[var(--accent-2)] text-white"
                       : "border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--accent-2)]"
@@ -98,6 +100,7 @@ export function PaintingSteps({ palette, index, done, onToggleDone, focus, onFoc
                     className="flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card-2)] py-0.5 pl-1 pr-2 font-semibold"
                   >
                     <span
+                      aria-hidden
                       className="h-3.5 w-3.5 rounded-full border border-black/15"
                       style={{ background: p.paint.hex }}
                     />
@@ -109,7 +112,10 @@ export function PaintingSteps({ palette, index, done, onToggleDone, focus, onFoc
               <p className="mt-2 text-[12px] leading-relaxed text-[var(--ink-soft)]">{s.tip}</p>
 
               <button
+                type="button"
                 onClick={() => onFocus(s.index)}
+                aria-pressed={isActive}
+                aria-label={isActive ? `Showing where to paint ${s.label}` : `Show where to paint ${s.label}`}
                 className={`mt-2 rounded-full px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
                   isActive
                     ? "bg-[var(--accent)] text-white"

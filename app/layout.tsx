@@ -56,12 +56,21 @@ export default async function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
       <body className="flex min-h-full flex-col">
+        <a href="#main-content" className="skip-link">
+          Skip to main content
+        </a>
         <ToastProvider>
           <GuestProjectMigration authed={Boolean(user)} />
           <PwaInstallPrompt />
           <MixerProvider>
             <Navbar user={navUser} />
-            <main className="mx-auto w-full max-w-xl flex-1 px-5 pb-10 pt-6">{children}</main>
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="mx-auto w-full max-w-xl flex-1 px-5 pb-10 pt-6"
+            >
+              {children}
+            </main>
             <Mixer />
           </MixerProvider>
         </ToastProvider>
