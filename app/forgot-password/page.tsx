@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requestPasswordReset } from "@/app/auth/actions";
+import { Icon } from "@/components/ui/Icon";
 
 const input =
   "w-full rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2.5 text-[15px] text-[var(--ink)] outline-none focus:border-[var(--accent)]";
@@ -15,7 +16,7 @@ export default async function ForgotPasswordPage({
     return (
       <div className="mx-auto max-w-sm py-10 text-center">
         <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--card-2)] text-2xl" aria-hidden>
-          ✉️
+          <Icon name="mail" size={24} />
         </div>
         <h1 className="mt-4 text-[24px] font-extrabold tracking-[-0.02em]">Check your email</h1>
         <p className="mx-auto mt-2 max-w-[34ch] text-[14px] leading-relaxed text-[var(--ink-soft)]">

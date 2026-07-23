@@ -5,6 +5,7 @@ import { luminance } from "@/lib/image/color";
 import { nearestName } from "@/lib/image/colorNames";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   colors: PaletteColor[];
@@ -62,7 +63,7 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
               </span>
               {isDone && (
                 <span className="absolute inset-0 grid place-items-center bg-black/15 text-[22px] font-bold text-white drop-shadow">
-                  ✓
+                  <Icon name="check" size={23} strokeWidth={2.4} />
                 </span>
               )}
               <span aria-hidden className="absolute bottom-1.5 right-[7px] rounded-md bg-black/30 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white opacity-0 transition-opacity group-hover:opacity-100">
@@ -83,7 +84,7 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
                     : "border-white/60 bg-black/25 text-white hover:bg-[var(--accent)]"
                 }`}
               >
-                ◎
+                <Icon name="target" size={15} />
               </button>
             )}
 
@@ -117,7 +118,7 @@ export function Palette({ colors, done, onToggleDone, focus, onFocus }: Props) {
                       : "text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--accent-2)]"
                   }`}
                 >
-                  ✓
+                  <Icon name="check" size={16} strokeWidth={2.2} />
                 </button>
               )}
             </div>

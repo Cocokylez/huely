@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { PipelineResult } from "@/lib/image/types";
 import { imageDataToDataUrl } from "@/lib/exports";
 import { cacheShot, getCachedShot, removeCachedShot } from "@/lib/history/save";
+import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   projectId: string | null;
@@ -76,6 +77,7 @@ export function CanvasShot({ projectId, result }: Props) {
         </div>
         {shot && (
           <button
+            type="button"
             onClick={() => setCompare((c) => !c)}
             className="flex-none rounded-full border border-[var(--line)] bg-[var(--card-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
           >
@@ -112,19 +114,21 @@ export function CanvasShot({ projectId, result }: Props) {
       {!shot ? (
         <div className="flex flex-col gap-2 sm:flex-row">
           <button
+            type="button"
             onClick={() => cameraRef.current?.click()}
             disabled={busy}
             className="flex flex-1 items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-[var(--line)] bg-[var(--card)] p-6 text-[14px] font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
           >
-            <span className="text-[20px]">📷</span>
+            <Icon name="camera" size={21} />
             {busy ? "Adding…" : "Take a photo"}
           </button>
           <button
+            type="button"
             onClick={() => inputRef.current?.click()}
             disabled={busy}
             className="flex flex-1 items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-[var(--line)] bg-[var(--card)] p-6 text-[14px] font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
           >
-            <span className="text-[20px]">🖼️</span>
+            <Icon name="image" size={21} />
             Choose a photo
           </button>
         </div>
@@ -159,20 +163,27 @@ export function CanvasShot({ projectId, result }: Props) {
 
           <div className="mt-2.5 flex gap-2">
             <button
+              type="button"
               onClick={() => cameraRef.current?.click()}
               disabled={busy}
               className="rounded-full border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
             >
-              {busy ? "Adding…" : "📷 Retake"}
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="camera" size={15} /> {busy ? "Adding…" : "Retake"}
+              </span>
             </button>
             <button
+              type="button"
               onClick={() => inputRef.current?.click()}
               disabled={busy}
               className="rounded-full border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
             >
-              🖼️ Choose
+              <span className="inline-flex items-center gap-1.5">
+                <Icon name="image" size={15} /> Choose
+              </span>
             </button>
             <button
+              type="button"
               onClick={() => {
                 setShot(null);
                 if (projectId) removeCachedShot(projectId).catch(() => {});

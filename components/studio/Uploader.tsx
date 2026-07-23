@@ -7,6 +7,7 @@ import type { ImageQuality } from "@/lib/image/types";
 import { IMAGE_QUALITY_OPTIONS } from "@/lib/image/quality";
 import { localList } from "@/lib/history/local";
 import { cloudList } from "@/lib/history/cloud";
+import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   onFile: (file: File) => void;
@@ -77,7 +78,9 @@ export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, er
           drag ? "border-[var(--accent)] bg-[var(--card-2)]" : "border-[var(--line)] hover:border-[var(--accent)]"
         }`}
       >
-        <div className="text-4xl" aria-hidden>🖼️</div>
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--paper-2)] text-[var(--accent)]">
+          <Icon name="imagePlus" size={25} />
+        </div>
         <p className="mt-3 text-[17px] font-bold">Choose a photo</p>
         <p className="text-[13px] text-[var(--ink-soft)]">From your gallery or files · or drag &amp; paste</p>
       </button>
@@ -87,7 +90,7 @@ export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, er
         onClick={() => cameraRef.current?.click()}
         className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[14px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.99]"
       >
-        <span className="text-[17px]" aria-hidden>📷</span> Take a photo instead
+        <Icon name="camera" size={18} /> Take a photo instead
       </button>
 
       <label className="mt-2.5 flex items-center gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3">

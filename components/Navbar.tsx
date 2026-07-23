@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/AccountMenu";
+import { Icon } from "@/components/ui/Icon";
 
 export type NavUser = { email: string; displayName: string | null } | null;
 
@@ -39,7 +40,7 @@ export function Navbar({ user }: { user: NavUser }) {
 
         <div className="flex items-center gap-1.5">
           <div className="hidden rounded-full bg-[var(--paper-2)] p-[3px] sm:flex">
-            <button onClick={openMixer} className={segClass(open)}>
+            <button type="button" onClick={openMixer} className={segClass(open)}>
               Mixer
             </button>
             <Link href="/history" className={segClass(pathname === "/history")}>
@@ -49,6 +50,7 @@ export function Navbar({ user }: { user: NavUser }) {
 
           {/* Mobile: icon circles */}
           <button
+            type="button"
             onClick={openMixer}
             aria-label="Color mixer"
             className="grid h-[34px] w-[34px] place-items-center rounded-full border border-[var(--line)] bg-[var(--paper-2)] active:scale-95 sm:hidden"
@@ -60,7 +62,7 @@ export function Navbar({ user }: { user: NavUser }) {
             aria-label="History"
             className="grid h-[34px] w-[34px] place-items-center rounded-full border border-[var(--line)] bg-[var(--paper-2)] text-[13px] text-[var(--ink-soft)] active:scale-95 sm:hidden"
           >
-            🕘
+            <Icon name="clock" size={16} />
           </Link>
 
           <ThemeToggle />

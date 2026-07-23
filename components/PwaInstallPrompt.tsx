@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon } from "@/components/ui/Icon";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -127,7 +128,7 @@ export function PwaInstallPrompt() {
         aria-label="Dismiss install suggestion"
         className="grid h-7 w-7 flex-none place-items-center rounded-full text-[12px] text-[var(--ink-soft)]"
       >
-        ✕
+        <Icon name="x" size={15} />
       </button>
     </aside>
   );

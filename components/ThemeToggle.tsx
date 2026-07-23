@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Icon, type IconName } from "@/components/ui/Icon";
 
 type Theme = "system" | "light" | "dark";
 
 const ORDER: Theme[] = ["system", "light", "dark"];
-const ICON: Record<Theme, string> = { system: "◐", light: "☀", dark: "☾" };
+const ICON: Record<Theme, IconName> = { system: "monitor", light: "sun", dark: "moon" };
 
 function apply(theme: Theme) {
   const root = document.documentElement;
@@ -33,12 +34,13 @@ export function ThemeToggle() {
 
   return (
     <button
+      type="button"
       onClick={cycle}
       aria-label={`Theme: ${theme}`}
       title={`Theme: ${theme}`}
       className="grid h-[34px] w-[34px] place-items-center rounded-full text-[15px] text-[var(--ink-soft)] hover:text-[var(--ink)] active:scale-95"
     >
-      {ICON[theme]}
+      <Icon name={ICON[theme]} size={17} />
     </button>
   );
 }

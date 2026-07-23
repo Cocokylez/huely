@@ -10,6 +10,7 @@ import {
 } from "@/lib/history/local";
 import { HUELY_STORAGE_CHANGED } from "@/lib/history/save";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Icon } from "@/components/ui/Icon";
 
 interface OriginStorageEstimate {
   usage: number;
@@ -178,7 +179,7 @@ export function StorageManager({ authed }: { authed: boolean }) {
     >
       <summary className="flex cursor-pointer list-none items-center gap-3 px-3.5 py-3.5">
         <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--paper-2)] text-[15px]" aria-hidden>
-          ◫
+          <Icon name="archive" size={17} />
         </span>
         <span className="min-w-0 flex-1">
           <b className="block text-[13px]">Device storage</b>
@@ -187,7 +188,7 @@ export function StorageManager({ authed }: { authed: boolean }) {
           </span>
         </span>
         <span className="text-[13px] text-[var(--ink-soft)] transition group-open:rotate-180" aria-hidden>
-          ▾
+          <Icon name="chevronDown" size={16} />
         </span>
       </summary>
 

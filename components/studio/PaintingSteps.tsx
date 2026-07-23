@@ -6,6 +6,7 @@ import { buildPaintingSteps } from "@/lib/image/paintingSteps";
 import { solveRecipe } from "@/lib/image/recipes";
 import { nearestName } from "@/lib/image/colorNames";
 import { useMyPaints } from "@/components/mixer/myPaints";
+import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   palette: PaletteColor[];
@@ -87,7 +88,7 @@ export function PaintingSteps({ palette, index, done, onToggleDone, focus, onFoc
                       : "border-[var(--line)] text-[var(--ink-soft)] hover:text-[var(--accent-2)]"
                   }`}
                 >
-                  ✓
+                  <Icon name="check" size={16} strokeWidth={2.2} />
                 </button>
               </div>
 

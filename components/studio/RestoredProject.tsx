@@ -82,7 +82,7 @@ export function RestoredProject({ project, authed, onNew }: Props) {
             />
           </div>
           <span className="flex-none text-[12px] font-semibold text-[var(--ink-soft)]">
-            {doneCount === total && total > 0 ? "All done 🎉" : `${doneCount} of ${total} done`}
+            {doneCount === total && total > 0 ? "Painting complete" : `${doneCount} of ${total} done`}
           </span>
         </div>
         <Palette colors={project.palette} done={done} onToggleDone={toggleDone} />

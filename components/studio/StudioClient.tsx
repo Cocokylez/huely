@@ -25,6 +25,7 @@ import {
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { setMixSource } from "@/components/mixer/mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
+import { Icon } from "@/components/ui/Icon";
 import { Uploader } from "./Uploader";
 import { Processing } from "./Processing";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -339,11 +340,11 @@ export function StudioClient({ authed, openId }: Props) {
             className="flex min-w-0 items-center gap-1.5 text-left"
           >
             <b className="truncate text-[15px]">{name || "Untitled"}</b>
-            <span className="text-[12px] text-[var(--ink-soft)]">✎</span>
+            <Icon name="edit" size={13} className="text-[var(--ink-soft)]" />
           </button>
         )}
-        <span role="status" aria-live="polite" className="flex-none text-[12px] text-[var(--ink-soft)]">
-          {saved ? "Saved ✓" : ""}
+        <span role="status" aria-live="polite" className="flex flex-none items-center gap-1 text-[12px] text-[var(--ink-soft)]">
+          {saved && <><Icon name="check" size={13} /> Saved</>}
         </span>
       </div>
 
@@ -374,7 +375,7 @@ export function StudioClient({ authed, openId }: Props) {
           aria-label="Open beginner painting guide"
           className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[13px] font-bold text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
-          ?
+          <Icon name="help" size={17} />
         </button>
         <button
           type="button"
@@ -383,7 +384,7 @@ export function StudioClient({ authed, openId }: Props) {
           aria-label="Open full-screen painting workspace"
           className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
-          ⤢
+          <Icon name="maximize" size={17} />
         </button>
       </div>
 
@@ -474,7 +475,7 @@ export function StudioClient({ authed, openId }: Props) {
             />
           </div>
           <span className="flex-none text-[12px] font-semibold text-[var(--ink-soft)]">
-            {doneCount === total && total > 0 ? "All done 🎉" : `${doneCount} of ${total} done`}
+            {doneCount === total && total > 0 ? "Painting complete" : `${doneCount} of ${total} done`}
           </span>
         </div>
 
@@ -486,8 +487,7 @@ export function StudioClient({ authed, openId }: Props) {
           onFocus={toggleFocus}
         />
         <p className="mt-3 text-[12px] text-[var(--ink-soft)]">
-          Tap a chip to copy · <b>◎</b> to paint just that color (rest fades) · <b>+ Mixer</b> to
-          blend · <b>✓</b> when it&apos;s done.
+          Tap a chip to copy · use the target button to isolate it · add it to Mixer · mark it done when painted.
         </p>
       </div>
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { PipelineResult, ViewMode } from "@/lib/image/types";
 import { nearestName } from "@/lib/image/colorNames";
 import { useMixer } from "@/components/mixer/MixerProvider";
+import { Icon } from "@/components/ui/Icon";
 import { ImageCanvas } from "./ImageCanvas";
 import { Palette } from "./Palette";
 import { PaintingSteps } from "./PaintingSteps";
@@ -128,7 +129,7 @@ export function FocusWorkspace(props: Props) {
           />
         </div>
         <span className="flex-none text-[12px] font-semibold text-[var(--ink-soft)]">
-          {doneCount === total && total > 0 ? "All done 🎉" : `${doneCount}/${total}`}
+          {doneCount === total && total > 0 ? "Complete" : `${doneCount}/${total}`}
         </span>
       </div>
 
@@ -185,7 +186,7 @@ export function FocusWorkspace(props: Props) {
       {/* Minimal top bar; mobile controls live in the shared bottom dock. */}
       <div className="flex items-center gap-2 border-b border-[var(--line)] px-2.5 py-2">
         <button type="button" autoFocus onClick={onExit} title="Exit focus (Esc)" aria-label="Exit workspace" className={iconBtn}>
-          ✕
+          <Icon name="x" size={17} />
         </button>
         <div className="min-w-0 flex-1 text-center md:hidden">
           <b className="block text-[13px] leading-tight">Painting workspace</b>
@@ -218,7 +219,7 @@ export function FocusWorkspace(props: Props) {
           {doneCount}/{total}
         </span>
         <button type="button" onClick={openMixer} title="Color mixer" aria-label="Open color mixer" className={`${iconBtn} hidden md:grid`}>
-          🎨
+          <Icon name="palette" size={17} />
         </button>
       </div>
 
@@ -268,7 +269,7 @@ export function FocusWorkspace(props: Props) {
             aria-label="Dismiss sampled color"
             className="grid h-6 w-6 place-items-center rounded-full text-[11px] text-[var(--ink-soft)]"
           >
-            ✕
+            <Icon name="x" size={14} />
           </button>
         </div>
       )}
@@ -309,7 +310,7 @@ export function FocusWorkspace(props: Props) {
                 aria-label="Close panel"
                 className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)]"
               >
-                ✕
+                <Icon name="x" size={15} />
               </button>
             </div>
 
@@ -374,7 +375,7 @@ export function FocusWorkspace(props: Props) {
             mobileSheet === "tools" ? "bg-[var(--paper-2)] text-[var(--accent)]" : "text-[var(--ink-soft)]"
           }`}
         >
-          <span className="text-[16px] leading-[17px] text-[var(--ink)]" aria-hidden>⊞</span>
+          <Icon name="grid" size={17} className="text-[var(--ink)]" />
           Tools
         </button>
         <button

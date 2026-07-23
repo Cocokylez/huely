@@ -9,6 +9,7 @@ import { hexToRgb, rgbToHex } from "@/lib/image/color";
 import { parseColorInput, solveRecipe } from "@/lib/image/recipes";
 import { useMyPaints } from "./myPaints";
 import { MyPaintsEditor } from "./MyPaintsEditor";
+import { Icon } from "@/components/ui/Icon";
 
 /**
  * Color Mixer — bottom sheet on mobile, 380px right side panel on ≥900px
@@ -60,11 +61,12 @@ export function Mixer() {
             </p>
           </div>
           <button
+            type="button"
             onClick={closeMixer}
             aria-label="Close"
             className="grid h-[34px] w-[34px] place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-95"
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </div>
 
@@ -126,27 +128,30 @@ export function Mixer() {
                 </div>
                 <div className="flex items-center gap-0.5 rounded-full bg-[var(--paper-2)] p-1">
                   <button
+                    type="button"
                     onClick={() => setParts(i, s.parts - 1)}
                     aria-label="Fewer parts"
                     className="grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold hover:bg-[var(--card-2)] hover:text-[var(--accent)]"
                   >
-                    −
+                    <Icon name="minus" size={15} />
                   </button>
                   <span className="min-w-5 text-center text-[13px] font-bold">{s.parts}</span>
                   <button
+                    type="button"
                     onClick={() => setParts(i, s.parts + 1)}
                     aria-label="More parts"
                     className="grid h-7 w-7 place-items-center rounded-full text-[15px] font-bold hover:bg-[var(--card-2)] hover:text-[var(--accent)]"
                   >
-                    ＋
+                    <Icon name="plus" size={15} />
                   </button>
                 </div>
                 <button
+                  type="button"
                   onClick={() => removeSlot(i)}
                   aria-label="Remove color"
                   className="grid h-7 w-7 flex-none place-items-center rounded-full text-[13px] text-[var(--ink-soft)] hover:text-[var(--accent)]"
                 >
-                  ✕
+                  <Icon name="x" size={14} />
                 </button>
               </div>
             );
@@ -171,8 +176,7 @@ export function Mixer() {
         <MixSourceChips />
 
         <p className="text-[12px] leading-relaxed text-[var(--ink-soft)]">
-          Mixing is subtractive, like real pigment — blue + yellow makes green. Use − / ＋ to change
-          how many parts of each color go in.
+          Mixing is subtractive, like real pigment — blue + yellow makes green. Use the minus and plus controls to change how many parts of each color go in.
         </p>
       </div>
     </div>
@@ -218,10 +222,11 @@ function MatchColor() {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => setEditPaints((s) => !s)}
-          className="flex-none rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
+          className="flex flex-none items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
         >
-          🎨 My paints ({myPaints.length})
+          <Icon name="palette" size={14} /> My paints ({myPaints.length})
         </button>
       </div>
 
@@ -271,9 +276,7 @@ function MatchColor() {
               />
               <span className="text-[10px] text-[var(--ink-soft)]">target</span>
             </div>
-            <span className="text-[15px] text-[var(--ink-soft)]" aria-hidden>
-              →
-            </span>
+            <Icon name="arrowRight" size={17} className="text-[var(--ink-soft)]" />
             <div className="flex flex-none flex-col items-center gap-1">
               <span
                 className="h-[46px] w-[46px] rounded-[10px] border border-black/10"

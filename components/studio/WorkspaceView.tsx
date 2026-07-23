@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { rgbToHex } from "@/lib/image/color";
+import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   width: number;
@@ -94,7 +95,7 @@ export function WorkspaceTools({
           className={toolChip(gridN > 0, panel)}
           title="Grid method — divide the reference into cells"
         >
-          <span aria-hidden>⊞</span> {gridN > 0 ? `Grid ${gridN}` : "Grid"}
+          <Icon name="grid" size={15} /> {gridN > 0 ? `Grid ${gridN}` : "Grid"}
         </button>
         <button
           type="button"
@@ -104,7 +105,7 @@ export function WorkspaceTools({
           className={toolChip(guides > 0, panel)}
           title="Composition guides"
         >
-          <span aria-hidden>⌖</span> {GUIDE_LABELS[guides]}
+          <Icon name="guides" size={15} /> {GUIDE_LABELS[guides]}
         </button>
         <button
           type="button"
@@ -114,7 +115,7 @@ export function WorkspaceTools({
           className={toolChip(gray, panel)}
           title="Value / grayscale study"
         >
-          <span aria-hidden>◐</span> Value
+          <Icon name="value" size={15} /> Value
         </button>
         <button
           type="button"
@@ -124,7 +125,7 @@ export function WorkspaceTools({
           className={toolChip(showAdjust || adjusted, panel)}
           title="Brightness / contrast / saturation"
         >
-          <span aria-hidden>☼</span> Adjust
+          <Icon name="sliders" size={15} /> Adjust
         </button>
         <button
           type="button"
@@ -134,7 +135,7 @@ export function WorkspaceTools({
           className={toolChip(flip, panel)}
           title="Flip horizontally to spot errors"
         >
-          <span aria-hidden>⇄</span> Flip
+          <Icon name="flip" size={15} /> Flip
         </button>
       </div>
 
@@ -473,7 +474,7 @@ export function WorkspaceView({
             aria-label="Zoom out"
             className="grid h-9 w-9 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
           >
-            −
+            <Icon name="zoomOut" size={17} />
           </button>
           <button
             type="button"
@@ -493,7 +494,7 @@ export function WorkspaceView({
             aria-label="Zoom in"
             className="grid h-9 w-9 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
           >
-            ＋
+            <Icon name="zoomIn" size={17} />
           </button>
         </div>
       </div>

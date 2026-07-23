@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useHistory } from "@/lib/hooks/useHistory";
 import { StorageManager } from "@/components/history/StorageManager";
+import { Icon } from "@/components/ui/Icon";
 
 /** History — "My projects" (spec 03 · History). */
 export function HistoryGrid({ authed }: { authed: boolean }) {
@@ -75,11 +76,12 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
               </button>
 
               <button
+                type="button"
                 aria-label="Project menu"
                 onClick={() => setMenuFor(menuFor === p.id ? null : p.id)}
                 className="absolute bottom-1.5 right-1.5 grid h-7 w-7 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[13px] text-[var(--ink-soft)] hover:text-[var(--ink)]"
               >
-                ⋯
+                <Icon name="more" size={17} />
               </button>
 
               {menuFor === p.id && (
@@ -118,8 +120,8 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
             href="/"
             className="grid min-h-[130px] place-items-center rounded-xl border-2 border-dashed border-[var(--line)] text-center text-[13px] text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
-            <span>
-              ＋<br />
+            <span className="flex flex-col items-center gap-1.5">
+              <Icon name="imagePlus" size={22} />
               New photo
             </span>
           </Link>

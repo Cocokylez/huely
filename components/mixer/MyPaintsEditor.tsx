@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { PAINT_CATALOG, type Paint } from "@/lib/image/recipes";
 import { useMyPaints, getMyPaints, setMyPaints, togglePaint, resetMyPaints } from "./myPaints";
+import { Icon } from "@/components/ui/Icon";
 
 /** Inline editor to pick the tubes you own (recipes solve against these). */
 export function MyPaintsEditor({ onClose }: { onClose: () => void }) {
@@ -35,7 +36,7 @@ export function MyPaintsEditor({ onClose }: { onClose: () => void }) {
     >
       <span className="h-4 w-4 flex-none rounded-full border border-black/15" style={{ background: p.hex }} />
       {p.name}
-      <span className="text-[var(--ink-soft)]">{owned ? "✓" : "+"}</span>
+      <Icon name={owned ? "check" : "plus"} size={13} className="text-[var(--ink-soft)]" />
     </button>
   );
 

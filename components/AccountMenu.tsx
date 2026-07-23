@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut } from "@/app/auth/actions";
+import { Icon } from "@/components/ui/Icon";
 
 export function AccountMenu({ name }: { name: string }) {
   return (
@@ -8,9 +9,9 @@ export function AccountMenu({ name }: { name: string }) {
       <button
         type="submit"
         title={`Signed in as ${name}`}
-        className="rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] active:scale-95"
+        className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1.5 text-[12px] font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] active:scale-95"
       >
-        Log out
+        <Icon name="logout" size={14} /> Log out
       </button>
     </form>
   );

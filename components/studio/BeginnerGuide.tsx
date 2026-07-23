@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { Icon } from "@/components/ui/Icon";
 
 const STORAGE_KEY = "huely-beginner-guide-seen";
 
@@ -142,7 +143,7 @@ export function BeginnerGuide({ open, onClose, onOpenWorkspace }: Props) {
             aria-label="Close beginner guide"
             className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--paper-2)] text-[14px] text-[var(--ink-soft)]"
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         </div>
 

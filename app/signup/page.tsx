@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signUp } from "@/app/auth/actions";
+import { Icon } from "@/components/ui/Icon";
 
 const input =
   "w-full rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2.5 text-[15px] text-[var(--ink)] outline-none focus:border-[var(--accent)]";
@@ -14,7 +15,9 @@ export default async function SignupPage({
   if (pending) {
     return (
       <div className="mx-auto max-w-sm py-10 text-center">
-        <div className="text-4xl">📬</div>
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-full bg-[var(--card-2)] text-[var(--accent)]">
+          <Icon name="mail" size={24} />
+        </div>
         <h1 className="mt-3 text-[22px] font-extrabold tracking-[-0.02em]">Check your email</h1>
         <p className="mx-auto mt-2 max-w-[32ch] text-[14px] text-[var(--ink-soft)]">
           We sent a confirmation link to <b className="text-[var(--ink)]">{pending}</b>. Click it
