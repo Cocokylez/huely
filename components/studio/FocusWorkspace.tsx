@@ -8,9 +8,11 @@ import { Icon } from "@/components/ui/Icon";
 import { ImageCanvas } from "./ImageCanvas";
 import { Palette } from "./Palette";
 import { PaintingSteps } from "./PaintingSteps";
+import { CanvasShot } from "./CanvasShot";
 import { WorkspaceTools, useWorkspaceTools } from "./WorkspaceView";
 
 interface Props {
+  projectId: string | null;
   result: PipelineResult;
   view: ViewMode;
   onView: (v: ViewMode) => void;
@@ -33,7 +35,7 @@ const VIEWS: { id: WorkspaceViewChoice; label: string; short: string; icon: "bru
   { id: "value", label: "Value study", short: "Value", icon: "value" },
 ];
 
-type MobileSheet = "views" | "transfer" | "analyze" | "paint" | null;
+type MobileSheet = "views" | "transfer" | "analyze" | "paint" | "compare" | null;
 
 /**
  * Full-screen painting workspace: the reference gets the screen (centered, big
@@ -41,11 +43,11 @@ type MobileSheet = "views" | "transfer" | "analyze" | "paint" | null;
  * side panel on desktop and one shared tool dock on mobile so the image stays clear.
  */
 export function FocusWorkspace(props: Props) {
-  const { result, view, onView, onSample, done, onToggleDone, focusColor, onFocus, onExit } = props;
+  const { projectId, result, view, onView, onSample, done, onToggleDone, focusColor, onFocus, onExit } = props;
   const { open: mixerOpen, openMixer, setTarget } = useMixer();
   const workspaceTools = useWorkspaceTools();
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
-  const [panelTab, setPanelTab] = useState<"colors" | "steps">("colors");
+  const [panelTab, setPanelTab] = useState<"colors" | "steps" | "compare">("colors");
   const [sampled, setSampled] = useState<string | null>(null);
 
   useEffect(() => {
@@ -156,10 +158,10 @@ export function FocusWorkspace(props: Props) {
 
       <div
         role="group"
-        aria-label="Color panel"
+        aria-label="Project panel"
         className="mb-3 flex gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px]"
       >
-        {(["colors", "steps"] as const).map((t) => (
+        {(["colors", "steps", "compare"] as const).map((t) => (
           <button
             key={t}
             type="button"
@@ -171,7 +173,7 @@ export function FocusWorkspace(props: Props) {
                 : "text-[var(--ink-soft)]"
             }`}
           >
-            {t === "colors" ? "Colors" : "Steps"}
+            {t === "colors" ? "Colors" : t === "steps" ? "Steps" : "Compare"}
           </button>
         ))}
       </div>
@@ -184,7 +186,7 @@ export function FocusWorkspace(props: Props) {
           focus={focusColor}
           onFocus={onFocus}
         />
-      ) : (
+      ) : panelTab === "steps" ? (
         <PaintingSteps
           palette={result.palette}
           index={result.index}
@@ -193,6 +195,21 @@ export function FocusWorkspace(props: Props) {
           focus={focusColor}
           onFocus={onFocus}
         />
+      ) : (
+        <CanvasShot projectId={projectId} result={result} />
+      )}
+
+      {panelTab !== "compare" && (
+        <button
+          type="button"
+          onClick={() => {
+            setMobileSheet(null);
+            openMixer();
+          }}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--card-2)] px-3 py-2.5 text-[11px] font-semibold text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+        >
+          <Icon name="palette" size={15} /> Open Paint Lab
+        </button>
       )}
     </>
   );
@@ -279,7 +296,7 @@ export function FocusWorkspace(props: Props) {
         {/* Desktop: side panel */}
         <aside className="hidden overflow-y-auto border-l border-[var(--line)] bg-[var(--paper)] p-4 md:block md:w-[340px]">
           <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-soft)]">
-            Paint
+            Project tools
           </p>
           {panelContent}
         </aside>
@@ -329,9 +346,13 @@ export function FocusWorkspace(props: Props) {
                   ? "Transfer tools"
                   : mobileSheet === "analyze"
                     ? "Image analysis tools"
-                    : "Paint colors and steps"
+                    : mobileSheet === "compare"
+                      ? "Compare reference and canvas"
+                      : "Paint colors and steps"
             }
-            className="fixed inset-x-2 z-[56] max-h-[62dvh] overflow-y-auto overscroll-contain rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-3.5 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] md:hidden"
+            className={`fixed inset-x-2 z-[56] overflow-y-auto overscroll-contain rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-3.5 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] md:hidden ${
+              mobileSheet === "compare" ? "max-h-[78dvh]" : "max-h-[62dvh]"
+            }`}
             style={{
               bottom: "calc(4.75rem + env(safe-area-inset-bottom))",
               animation: "sheet-up 0.24s cubic-bezier(0.2,0.8,0.2,1)",
@@ -345,7 +366,9 @@ export function FocusWorkspace(props: Props) {
                     ? "Transfer"
                     : mobileSheet === "analyze"
                       ? "Analyze"
-                      : "Paint"}
+                      : mobileSheet === "compare"
+                        ? "Compare"
+                        : "Paint"}
               </h2>
               <button
                 type="button"
@@ -400,6 +423,8 @@ export function FocusWorkspace(props: Props) {
             )}
 
             {mobileSheet === "paint" && panelContent}
+
+            {mobileSheet === "compare" && <CanvasShot projectId={projectId} result={result} />}
           </section>
         </>
       )}
@@ -439,7 +464,10 @@ export function FocusWorkspace(props: Props) {
         </button>
         <button
           type="button"
-          onClick={() => toggleSheet("paint")}
+          onClick={() => {
+            if (panelTab === "compare") setPanelTab("colors");
+            toggleSheet("paint");
+          }}
           aria-pressed={mobileSheet === "paint"}
           className={dockButton(mobileSheet === "paint")}
         >
@@ -453,14 +481,12 @@ export function FocusWorkspace(props: Props) {
         </button>
         <button
           type="button"
-          onClick={() => {
-            setMobileSheet(null);
-            openMixer();
-          }}
-          className={dockButton(false)}
+          onClick={() => toggleSheet("compare")}
+          aria-pressed={mobileSheet === "compare"}
+          className={dockButton(mobileSheet === "compare")}
         >
-          <Icon name="palette" size={17} className="text-[var(--ink)]" />
-          Lab
+          <Icon name="compare" size={17} className="text-[var(--ink)]" />
+          Compare
         </button>
       </nav>
     </div>

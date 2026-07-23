@@ -360,6 +360,7 @@ export function StudioClient({ authed, openId }: Props) {
 
       {focusMode && (
         <FocusWorkspace
+          projectId={projectId}
           result={result}
           view={view}
           onView={setView}
