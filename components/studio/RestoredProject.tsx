@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { HistoryProject } from "@/lib/history/types";
 import { patchDone } from "@/lib/history/save";
 import { displayProjectName } from "@/lib/history/name";
+import { formatCanvasSize } from "@/lib/canvas/spec";
 import { Palette } from "./Palette";
 import { SampleReadout } from "./SampleReadout";
 import { WorkspaceView } from "./WorkspaceView";
@@ -55,8 +56,7 @@ export function RestoredProject({ project, authed, onNew }: Props) {
       <div className="mb-2 flex items-center justify-between gap-3">
         <b className="truncate text-[15px]">{displayProjectName(project.name)}</b>
         <span className="flex-none text-[12px] text-[var(--ink-soft)]">
-          {new Date(project.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} ·{" "}
-          {total} colors
+          {project.canvas ? `${formatCanvasSize(project.canvas)} · ` : ""}{total} colors
         </span>
       </div>
 
@@ -65,6 +65,7 @@ export function RestoredProject({ project, authed, onNew }: Props) {
           <WorkspaceView
             width={img.width}
             height={img.height}
+            canvas={project.canvas}
             draw={draw}
             onSample={setSample}
             workspaceId={project.id}

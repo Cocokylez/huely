@@ -1,4 +1,5 @@
 import type { ViewMode } from "@/lib/image/types";
+import { isCanvasSpec, type CanvasSpec } from "@/lib/canvas/spec";
 
 export type WorkspacePanel = "colors" | "steps" | "compare";
 export type CanvasCompareMode = "split" | "overlay" | "side";
@@ -29,6 +30,7 @@ export interface CanvasCompareSettings {
 
 export interface ProjectWorkspaceCache {
   version: 1;
+  canvas?: CanvasSpec;
   settings?: WorkspaceSettings;
   viewport?: WorkspaceViewport;
   compare?: CanvasCompareSettings;
@@ -46,7 +48,10 @@ export function readProjectWorkspace(projectId: string): ProjectWorkspaceCache |
     const raw = window.localStorage.getItem(keyFor(projectId));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as ProjectWorkspaceCache;
-    return parsed?.version === 1 ? parsed : null;
+    if (parsed?.version !== 1) return null;
+    return parsed.canvas && !isCanvasSpec(parsed.canvas)
+      ? { ...parsed, canvas: undefined }
+      : parsed;
   } catch {
     return null;
   }

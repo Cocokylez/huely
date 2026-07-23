@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { PipelineResult, ViewMode } from "@/lib/image/types";
+import { formatCanvasSize, type CanvasSpec } from "@/lib/canvas/spec";
 import { nearestName } from "@/lib/image/colorNames";
 import {
   patchProjectWorkspace,
@@ -18,6 +19,7 @@ import { WorkspaceTools, useWorkspaceTools } from "./WorkspaceView";
 
 interface Props {
   projectId: string | null;
+  canvas?: CanvasSpec | null;
   result: PipelineResult;
   view: ViewMode;
   onView: (v: ViewMode) => void;
@@ -51,6 +53,7 @@ type MobileSheet = "views" | "transfer" | "analyze" | "paint" | "compare" | null
 export function FocusWorkspace(props: Props) {
   const {
     projectId,
+    canvas,
     result,
     view,
     onView,
@@ -309,7 +312,7 @@ export function FocusWorkspace(props: Props) {
         <div className="min-w-0 flex-1 text-center md:hidden">
           <b className="block text-[13px] leading-tight">Painting workspace</b>
           <span className="block text-[10px] text-[var(--ink-soft)]">
-            {currentView.label} · {displayWidth}×{displayHeight}
+            {currentView.label} · {canvas ? formatCanvasSize(canvas) : `${displayWidth}×${displayHeight}`}
           </span>
         </div>
         <div
@@ -333,6 +336,11 @@ export function FocusWorkspace(props: Props) {
             </button>
           ))}
         </div>
+        {canvas && (
+          <span className="hidden flex-none rounded-full border border-[var(--line)] bg-[var(--card)] px-2.5 py-1.5 text-[10px] font-semibold text-[var(--ink-soft)] md:block">
+            {formatCanvasSize(canvas)}
+          </span>
+        )}
         <span className="min-w-9 flex-none text-center text-[11px] font-semibold text-[var(--ink-soft)] md:hidden">
           {doneCount}/{total}
         </span>
@@ -362,6 +370,7 @@ export function FocusWorkspace(props: Props) {
             <div className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-2 shadow-[0_16px_42px_rgba(43,39,35,0.14)]">
               <ImageCanvas
                 result={result}
+                canvas={canvas}
                 view={view}
                 onSample={sampleColor}
                 done={done}

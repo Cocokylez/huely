@@ -1,4 +1,5 @@
 import type { MixSlot, PaletteColor } from "@/lib/image/types";
+import type { CanvasSpec } from "@/lib/canvas/spec";
 
 export interface HistoryProject {
   id: string;
@@ -10,4 +11,6 @@ export interface HistoryProject {
   done: number[];
   thumbDataUrl: string;
   createdAt: number;
+  /** Physical painting surface chosen while framing the source photo. */
+  canvas?: CanvasSpec;
 }

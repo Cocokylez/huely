@@ -2,11 +2,13 @@
 
 import { useCallback } from "react";
 import type { PipelineResult, ViewMode } from "@/lib/image/types";
+import type { CanvasSpec } from "@/lib/canvas/spec";
 import { mix } from "@/lib/image/color";
 import { WorkspaceView, type WorkspaceToolsState } from "./WorkspaceView";
 
 interface Props {
   result: PipelineResult;
+  canvas?: CanvasSpec | null;
   view: ViewMode;
   onSample: (hex: string) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement | null>;
@@ -35,6 +37,7 @@ function readVar(name: string, fallback: [number, number, number]): [number, num
  *  the by-numbers view) into the reusable painting workspace. */
 export function ImageCanvas({
   result,
+  canvas,
   view,
   onSample,
   canvasRef,
@@ -110,6 +113,7 @@ export function ImageCanvas({
       toolbar={toolbar}
       workspaceId={workspaceId}
       immersive={immersive}
+      canvas={canvas}
     />
   );
 }

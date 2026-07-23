@@ -29,6 +29,9 @@ import { useCreateFlow } from "@/components/create/CreateProvider";
 import { setMixSource } from "@/components/mixer/mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Icon } from "@/components/ui/Icon";
+import { CanvasSetup } from "@/components/create/CanvasSetup";
+import type { CanvasSpec } from "@/lib/canvas/spec";
+import { patchProjectWorkspace, readProjectWorkspace } from "@/lib/history/workspace";
 import { Uploader } from "./Uploader";
 import { Processing } from "./Processing";
 import { ViewSwitcher } from "./ViewSwitcher";
@@ -86,11 +89,15 @@ export function StudioClient({ authed, openId }: Props) {
   const thumbRef = useRef<string>("");
 
   const [restored, setRestored] = useState<HistoryProject | null>(null);
+  const [setupFile, setSetupFile] = useState<File | null>(null);
+  const [canvasSpec, setCanvasSpec] = useState<CanvasSpec | null>(null);
   const openProject = useCallback(
     async (id: string) => {
       try {
         const p = await getProject(authed, id);
         if (!p) return;
+        const savedCanvas = p.canvas ?? readProjectWorkspace(p.id)?.canvas ?? null;
+        setCanvasSpec(savedCanvas);
         setProjectCreatedAt(p.createdAt);
         setMixSource(p.palette);
         if (p.mixer.length) loadSlots(p.mixer);
@@ -111,7 +118,7 @@ export function StudioClient({ authed, openId }: Props) {
           await processDataUrl(src, p.colorCount);
         } else {
           // No local cache (e.g. opened on another device) → thumbnail fallback.
-          setRestored(p);
+          setRestored({ ...p, canvas: savedCanvas ?? undefined });
         }
       } catch {
         toast("Couldn't open that project");
@@ -160,10 +167,12 @@ export function StudioClient({ authed, openId }: Props) {
       done: kind === "new" ? [] : [...done],
       thumbDataUrl: thumb,
       createdAt,
+      canvas: canvasSpec ?? undefined,
     };
 
     (kind === "new" ? saveProject(authed, project) : updateProject(authed, project))
       .then(() => {
+        if (canvasSpec) patchProjectWorkspace(id, { canvas: canvasSpec });
         if (kind === "new") {
           setProjectId(id);
           setName(nm);
@@ -178,8 +187,19 @@ export function StudioClient({ authed, openId }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, result]);
 
-  const handleFile = useCallback(
+  const beginCanvasSetup = useCallback(
     (file: File) => {
+      if (!file.type.startsWith("image/")) return;
+      reset();
+      setSetupFile(file);
+    },
+    [reset],
+  );
+
+  const processFramedPhoto = useCallback(
+    (file: File, nextCanvas: CanvasSpec) => {
+      setSetupFile(null);
+      setCanvasSpec(nextCanvas);
       setRestored(null);
       setSample(null);
       setView("oil");
@@ -202,8 +222,8 @@ export function StudioClient({ authed, openId }: Props) {
     if (!draft || handledDraftRef.current === draft.id) return;
     handledDraftRef.current = draft.id;
     consumeDraft(draft.id);
-    handleFile(draft.file);
-  }, [consumeDraft, draft, handleFile]);
+    beginCanvasSetup(draft.file);
+  }, [beginCanvasSetup, consumeDraft, draft]);
 
   const requantize = (n: number) => {
     setDone(new Set()); // palette indices change meaning at a new count
@@ -258,6 +278,7 @@ export function StudioClient({ authed, openId }: Props) {
         done: [...done],
         thumbDataUrl: thumbRef.current || imageDataToThumb(result.oil),
         createdAt: projectCreatedAt,
+        canvas: canvasSpec ?? undefined,
       });
     } catch {
       toast("Couldn't rename");
@@ -275,6 +296,8 @@ export function StudioClient({ authed, openId }: Props) {
     openWorkspaceOnReadyRef.current = true;
     setProjectId(null);
     setSaved(false);
+    setSetupFile(null);
+    setCanvasSpec(null);
     reset();
     setMixSource([]);
     if (openId) router.replace("/create");
@@ -315,12 +338,24 @@ export function StudioClient({ authed, openId }: Props) {
   }
 
   if (!result) {
+    if (setupFile) {
+      return (
+        <CanvasSetup
+          file={setupFile}
+          onBack={() => {
+            setSetupFile(null);
+            reset();
+          }}
+          onReady={processFramedPhoto}
+        />
+      );
+    }
     if (status === "processing") {
       return <Processing stage={stage} previewUrl={previewUrl} onCancel={startOver} />;
     }
     return (
       <Uploader
-        onFile={handleFile}
+        onFile={beginCanvasSetup}
         quality={quality}
         onQuality={setQuality}
         error={error}
@@ -372,6 +407,7 @@ export function StudioClient({ authed, openId }: Props) {
       {focusMode && (
         <FocusWorkspace
           projectId={projectId}
+          canvas={canvasSpec}
           result={result}
           view={view}
           onView={setView}
@@ -414,6 +450,7 @@ export function StudioClient({ authed, openId }: Props) {
       <div className="rounded-[18px] bg-[var(--card)] p-2 shadow-[var(--shadow-sm)]">
         <ImageCanvas
           result={result}
+          canvas={canvasSpec}
           view={view}
           onSample={setSample}
           canvasRef={canvasRef}

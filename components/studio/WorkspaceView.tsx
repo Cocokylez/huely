@@ -2,12 +2,15 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { rgbToHex } from "@/lib/image/color";
+import { formatCanvasCellSize, type CanvasSpec } from "@/lib/canvas/spec";
 import { patchProjectWorkspace, readProjectWorkspace } from "@/lib/history/workspace";
 import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   width: number;
   height: number;
+  /** Physical painting surface used to label transfer-grid measurements. */
+  canvas?: CanvasSpec | null;
   /** Renders the base image into the 2D context (canvas is sized to width×height first). */
   draw: (ctx: CanvasRenderingContext2D) => void;
   onSample: (hex: string) => void;
@@ -229,6 +232,7 @@ export function WorkspaceView({
   toolbar = "default",
   workspaceId,
   immersive = false,
+  canvas,
 }: Props) {
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
@@ -472,7 +476,12 @@ export function WorkspaceView({
   // ---- Overlays (image-space lines, crisp at any zoom, visible on any bg) ----
   const lines: { x1: number; y1: number; x2: number; y2: number }[] = [];
   if (gridN > 0) {
-    const rows = Math.max(1, Math.round((gridN * height) / width));
+    const rows = Math.max(
+      1,
+      Math.round(
+        canvas ? (gridN * canvas.height) / canvas.width : (gridN * height) / width,
+      ),
+    );
     for (let i = 1; i < gridN; i++) lines.push({ x1: (i * width) / gridN, y1: 0, x2: (i * width) / gridN, y2: height });
     for (let j = 1; j < rows; j++) lines.push({ x1: 0, y1: (j * height) / rows, x2: width, y2: (j * height) / rows });
   }
@@ -565,6 +574,12 @@ export function WorkspaceView({
             </div>
           </div>
         </div>
+
+        {gridN > 0 && canvas && (
+          <span className="pointer-events-none absolute left-2 top-2 z-10 rounded-full border border-white/20 bg-black/55 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-sm">
+            {formatCanvasCellSize(canvas, gridN)}
+          </span>
+        )}
 
         <div
           role="group"

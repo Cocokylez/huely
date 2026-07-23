@@ -7,6 +7,8 @@ import { getShot } from "@/lib/history/local";
 import { displayProjectName } from "@/lib/history/name";
 import type { HistoryProject } from "@/lib/history/types";
 import { Icon } from "@/components/ui/Icon";
+import { formatCanvasSize, type CanvasSpec } from "@/lib/canvas/spec";
+import { readProjectWorkspace } from "@/lib/history/workspace";
 
 interface ProjectGroup {
   key: string;
@@ -84,14 +86,21 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [shots, setShots] = useState<Record<string, string>>({});
+  const [canvases, setCanvases] = useState<Record<string, CanvasSpec>>({});
 
   useEffect(() => {
     let current = true;
+    const canvasByProject: Record<string, CanvasSpec> = {};
+    for (const project of items) {
+      const canvas = project.canvas ?? readProjectWorkspace(project.id)?.canvas;
+      if (canvas) canvasByProject[project.id] = canvas;
+    }
     Promise.all(
       items.map(async (project) => [project.id, await getShot(project.id)] as const),
     )
       .then((entries) => {
         if (!current) return;
+        setCanvases(canvasByProject);
         setShots(
           Object.fromEntries(entries.filter((entry): entry is readonly [string, string] => Boolean(entry[1]))),
         );
@@ -218,6 +227,7 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                       <ProjectCard
                         key={project.id}
                         project={project}
+                        canvas={canvases[project.id]}
                         shot={shots[project.id]}
                         menuOpen={menuFor === project.id}
                         onOpen={() => openProject(project.id)}
@@ -255,6 +265,7 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
 
 function ProjectCard({
   project,
+  canvas,
   shot,
   menuOpen,
   onOpen,
@@ -263,6 +274,7 @@ function ProjectCard({
   onDelete,
 }: {
   project: HistoryProject;
+  canvas?: CanvasSpec;
   shot?: string;
   menuOpen: boolean;
   onOpen: () => void;
@@ -309,7 +321,7 @@ function ProjectCard({
           <div className="mt-2 flex items-center gap-2.5">
             <PaletteStrip project={project} />
             <span className="flex-none text-[10px] font-medium text-[var(--ink-soft)]">
-              {project.palette.length} colors
+              {canvas ? `${formatCanvasSize(canvas)} · ` : ""}{project.palette.length} colors
             </span>
           </div>
           <div
