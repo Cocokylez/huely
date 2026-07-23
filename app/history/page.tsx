@@ -1,7 +1,5 @@
-import { getUser } from "@/lib/supabase/server";
-import { HistoryGrid } from "@/components/history/HistoryGrid";
+import { permanentRedirect } from "next/navigation";
 
-export default async function HistoryPage() {
-  const user = await getUser();
-  return <HistoryGrid authed={!!user} />;
+export default function LegacyHistoryPage() {
+  permanentRedirect("/");
 }

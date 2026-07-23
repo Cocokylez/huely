@@ -96,7 +96,7 @@ export function PwaInstallPrompt() {
     return (
       <div
         className="fixed left-1/2 z-40 -translate-x-1/2 rounded-full border border-[var(--line)] bg-[var(--ink)] px-4 py-2 text-center text-[11px] font-semibold text-[var(--paper)] shadow-[var(--shadow)]"
-        style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))" }}
+        style={{ bottom: "calc(7rem + env(safe-area-inset-bottom))" }}
       >
         Offline · photos still process on this device
       </div>
@@ -108,7 +108,7 @@ export function PwaInstallPrompt() {
   return (
     <aside
       className="fixed inset-x-3 z-40 mx-auto flex max-w-sm items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card-2)] p-3 shadow-[var(--shadow)]"
-      style={{ bottom: "calc(5.75rem + env(safe-area-inset-bottom))" }}
+      style={{ bottom: "calc(7rem + env(safe-area-inset-bottom))" }}
     >
       <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--accent)] text-[16px] font-black text-white" aria-hidden>
         H

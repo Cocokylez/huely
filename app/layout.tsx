@@ -4,6 +4,7 @@ import { ToastProvider } from "@/components/ui/ToastProvider";
 import { MixerProvider } from "@/components/mixer/MixerProvider";
 import { Mixer } from "@/components/mixer/Mixer";
 import { Navbar } from "@/components/Navbar";
+import { CreateProvider } from "@/components/create/CreateProvider";
 import { GuestProjectMigration } from "@/components/history/GuestProjectMigration";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 import { getUser } from "@/lib/supabase/server";
@@ -63,15 +64,17 @@ export default async function RootLayout({
           <GuestProjectMigration authed={Boolean(user)} />
           <PwaInstallPrompt />
           <MixerProvider>
-            <Navbar user={navUser} />
-            <main
-              id="main-content"
-              tabIndex={-1}
-              className="mx-auto w-full max-w-xl flex-1 px-5 pb-28 pt-6"
-            >
-              {children}
-            </main>
-            <Mixer />
+            <CreateProvider>
+              <Navbar user={navUser} />
+              <main
+                id="main-content"
+                tabIndex={-1}
+                className="mx-auto w-full max-w-xl flex-1 px-5 pb-28 pt-6"
+              >
+                {children}
+              </main>
+              <Mixer />
+            </CreateProvider>
           </MixerProvider>
         </ToastProvider>
         <div id="print-area" className="print-area" aria-hidden="true" />

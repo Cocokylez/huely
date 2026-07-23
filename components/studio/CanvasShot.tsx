@@ -3,7 +3,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PipelineResult } from "@/lib/image/types";
 import { imageDataToDataUrl } from "@/lib/exports";
-import { cacheShot, getCachedShot, removeCachedShot } from "@/lib/history/save";
+import {
+  cacheShot,
+  getCachedShot,
+  HUELY_STORAGE_CHANGED,
+  removeCachedShot,
+} from "@/lib/history/save";
+import {
+  patchProjectWorkspace,
+  readProjectWorkspace,
+  type CanvasCompareMode,
+} from "@/lib/history/workspace";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
@@ -12,9 +22,7 @@ interface Props {
   result: PipelineResult;
 }
 
-type CompareMode = "split" | "overlay" | "side";
-
-const MODES: { id: CompareMode; label: string; icon: IconName }[] = [
+const MODES: { id: CanvasCompareMode; label: string; icon: IconName }[] = [
   { id: "split", label: "Split", icon: "compare" },
   { id: "overlay", label: "Overlay", icon: "layers" },
   { id: "side", label: "Side by side", icon: "image" },
@@ -89,10 +97,13 @@ export function CanvasShot({ projectId, result }: Props) {
   const pendingShotRef = useRef<string | null>(null);
   const { toast } = useToast();
   const [shot, setShot] = useState<string | null>(null);
-  const [mode, setMode] = useState<CompareMode>("split");
+  const [mode, setMode] = useState<CanvasCompareMode>("split");
   const [split, setSplit] = useState(50);
   const [opacity, setOpacity] = useState(50);
   const [busy, setBusy] = useState(false);
+  const [loadedCompareId, setLoadedCompareId] = useState<string | null>(null);
+  const compareStateRef = useRef({ mode, split, opacity, loadedCompareId });
+  compareStateRef.current = { mode, split, opacity, loadedCompareId };
 
   useEffect(() => {
     let cancelled = false;
@@ -101,20 +112,63 @@ export function CanvasShot({ projectId, result }: Props) {
       return;
     }
 
+    const loadShot = () => {
+      void getCachedShot(projectId).then((url) => {
+        if (!cancelled) setShot(url ?? null);
+      });
+    };
+
     if (pendingShotRef.current) {
       const pending = pendingShotRef.current;
       pendingShotRef.current = null;
       void cacheShot(projectId, pending);
-      return;
+    } else {
+      loadShot();
     }
 
-    getCachedShot(projectId).then((url) => {
-      if (!cancelled) setShot(url ?? null);
-    });
+    window.addEventListener(HUELY_STORAGE_CHANGED, loadShot);
     return () => {
       cancelled = true;
+      window.removeEventListener(HUELY_STORAGE_CHANGED, loadShot);
     };
   }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId) {
+      setLoadedCompareId(null);
+      return;
+    }
+    const saved = readProjectWorkspace(projectId)?.compare;
+    if (saved) {
+      setMode(["split", "overlay", "side"].includes(saved.mode) ? saved.mode : "split");
+      setSplit(Number.isFinite(saved.split) ? Math.min(100, Math.max(0, saved.split)) : 50);
+      setOpacity(Number.isFinite(saved.opacity) ? Math.min(100, Math.max(0, saved.opacity)) : 50);
+    }
+    setLoadedCompareId(projectId);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId || loadedCompareId !== projectId) return;
+    const timer = window.setTimeout(() => {
+      patchProjectWorkspace(projectId, { compare: { mode, split, opacity } });
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [projectId, loadedCompareId, mode, split, opacity]);
+
+  useEffect(
+    () => () => {
+      const current = compareStateRef.current;
+      if (!projectId || current.loadedCompareId !== projectId) return;
+      patchProjectWorkspace(projectId, {
+        compare: {
+          mode: current.mode,
+          split: current.split,
+          opacity: current.opacity,
+        },
+      });
+    },
+    [projectId],
+  );
 
   const referenceUrl = useMemo(() => imageDataToDataUrl(result.oil), [result.oil]);
   const aspectRatio = `${result.w} / ${result.h}`;

@@ -24,6 +24,7 @@ import {
   imageDataToJpegDataUrl,
 } from "@/lib/exports";
 import { useMixer } from "@/components/mixer/MixerProvider";
+import { useCreateFlow } from "@/components/create/CreateProvider";
 import { setMixSource } from "@/components/mixer/mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
 import { Icon } from "@/components/ui/Icon";
@@ -70,6 +71,7 @@ export function StudioClient({ authed, openId }: Props) {
   const { slots, loadSlots } = useMixer();
   const { toast } = useToast();
   const router = useRouter();
+  const { draft, consumeDraft } = useCreateFlow();
 
   const [view, setView] = useState<ViewMode>("oil");
   const [sample, setSample] = useState<string | null>(null);
@@ -79,6 +81,7 @@ export function StudioClient({ authed, openId }: Props) {
   const [guideOpen, setGuideOpen] = useState(false);
   const guideCheckedRef = useRef(false);
   const openWorkspaceOnReadyRef = useRef(true);
+  const handledDraftRef = useRef<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -196,6 +199,13 @@ export function StudioClient({ authed, openId }: Props) {
     [process],
   );
 
+  useEffect(() => {
+    if (!draft || handledDraftRef.current === draft.id) return;
+    handledDraftRef.current = draft.id;
+    consumeDraft(draft.id);
+    handleFile(draft.file);
+  }, [consumeDraft, draft, handleFile]);
+
   const requantize = (n: number) => {
     setDone(new Set()); // palette indices change meaning at a new count
     setFocusColor(null);
@@ -268,7 +278,7 @@ export function StudioClient({ authed, openId }: Props) {
     setSaved(false);
     reset();
     setMixSource([]);
-    if (openId) router.replace("/");
+    if (openId) router.replace("/create");
   };
 
   const download = () => {
@@ -308,10 +318,8 @@ export function StudioClient({ authed, openId }: Props) {
     return (
       <Uploader
         onFile={handleFile}
-        onOpenProject={openProject}
         quality={quality}
         onQuality={setQuality}
-        authed={authed}
         error={error}
       />
     );
@@ -369,6 +377,7 @@ export function StudioClient({ authed, openId }: Props) {
           onToggleDone={toggleDone}
           focusColor={focusColor}
           onFocus={toggleFocus}
+          onRestoreFocus={setFocusColor}
           onDoneNext={doneAndNext}
           onClearFocus={() => setFocusColor(null)}
           onExit={() => setFocusMode(false)}

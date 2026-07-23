@@ -15,6 +15,8 @@ interface Props {
   focus?: number | null;
   workspaceTools?: WorkspaceToolsState;
   toolbar?: "default" | "desktop-only" | "hidden";
+  workspaceId?: string | null;
+  immersive?: boolean;
 }
 
 function readVar(name: string, fallback: [number, number, number]): [number, number, number] {
@@ -40,6 +42,8 @@ export function ImageCanvas({
   focus,
   workspaceTools,
   toolbar,
+  workspaceId,
+  immersive,
 }: Props) {
   const displayWidth = view === "original" ? result.original.width : result.w;
   const displayHeight = view === "original" ? result.original.height : result.h;
@@ -104,6 +108,8 @@ export function ImageCanvas({
       canvasRef={canvasRef}
       tools={workspaceTools}
       toolbar={toolbar}
+      workspaceId={workspaceId}
+      immersive={immersive}
     />
   );
 }

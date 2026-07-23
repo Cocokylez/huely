@@ -1,39 +1,25 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import type { HistoryProject } from "@/lib/history/types";
 import type { ImageQuality } from "@/lib/image/types";
 import { IMAGE_QUALITY_OPTIONS } from "@/lib/image/quality";
-import { localList } from "@/lib/history/local";
-import { cloudList } from "@/lib/history/cloud";
 import { Icon } from "@/components/ui/Icon";
 
 interface Props {
   onFile: (file: File) => void;
-  onOpenProject: (id: string) => void;
   quality: ImageQuality;
   onQuality: (quality: ImageQuality) => void;
-  authed: boolean;
   error?: string | null;
 }
 
-/** Upload screen — hero, dropzone (choose / take / drag / paste), privacy line.
- *  Returning users see a "Recent" row instead of the steps list (spec 03). */
-export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, error }: Props) {
+/** Direct-create fallback for visits that did not start from the center plus sheet. */
+export function Uploader({ onFile, quality, onQuality, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
-  const [recent, setRecent] = useState<HistoryProject[]>([]);
   const qualityDescription =
     IMAGE_QUALITY_OPTIONS.find((option) => option.id === quality)?.description ??
     IMAGE_QUALITY_OPTIONS[0].description;
-
-  useEffect(() => {
-    (authed ? cloudList() : localList())
-      .then((items) => setRecent(items.slice(0, 3)))
-      .catch(() => setRecent([]));
-  }, [authed]);
 
   // Paste support: ⌘/Ctrl+V an image anywhere on the upload screen.
   useEffect(() => {
@@ -50,14 +36,30 @@ export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, er
 
   return (
     <div>
-      <div className="mb-5">
-        <h1 className="text-[34px] font-extrabold leading-tight tracking-[-0.03em]">
-          Paint it for real.
-        </h1>
-        <p className="mt-2 max-w-[38ch] text-[15px] text-[var(--ink-soft)]">
-          A photo becomes an oil-paint reference and the exact colors to mix by hand.
-        </p>
-      </div>
+      <header className="relative mb-4 overflow-hidden rounded-[24px] border border-[var(--line)] bg-[var(--card)] p-5 shadow-[var(--shadow-sm)]">
+        <span className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-[var(--accent-soft)] opacity-35 blur-3xl" aria-hidden />
+        <span className="absolute -bottom-12 left-[38%] h-28 w-28 rounded-full bg-[var(--accent-2)] opacity-15 blur-3xl" aria-hidden />
+        <div className="relative">
+          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--accent)]">
+            <Icon name="sparkles" size={13} /> Your pocket painting studio
+          </p>
+          <h1 className="max-w-[10ch] text-[38px] font-extrabold leading-[0.98] tracking-[-0.045em]">
+            Paint it for real.
+          </h1>
+          <p className="mt-3 max-w-[38ch] text-[13px] leading-relaxed text-[var(--ink-soft)]">
+            Turn any photo into an oil study, a practical palette, and exact paint-mixing recipes.
+          </p>
+          <div className="mt-4 flex items-center gap-1.5" aria-hidden>
+            {["#C65D3B", "#D79B62", "#2F6F6A", "#344E63", "#E5D3B3"].map((color, index) => (
+              <span
+                key={color}
+                className={`h-3 rounded-full border border-black/5 ${index === 0 ? "w-10" : "w-6"}`}
+                style={{ background: color }}
+              />
+            ))}
+          </div>
+        </div>
+      </header>
 
       <button
         type="button"
@@ -74,21 +76,21 @@ export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, er
           const f = e.dataTransfer.files?.[0];
           if (f) onFile(f);
         }}
-        className={`block w-full rounded-[18px] border-2 border-dashed bg-[var(--card)] p-12 text-center shadow-[var(--shadow-sm)] transition active:scale-[0.995] ${
+        className={`group block w-full rounded-[20px] border-2 border-dashed bg-[var(--card)] px-6 py-9 text-center shadow-[var(--shadow-sm)] transition active:scale-[0.995] ${
           drag ? "border-[var(--accent)] bg-[var(--card-2)]" : "border-[var(--line)] hover:border-[var(--accent)]"
         }`}
       >
-        <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[var(--paper-2)] text-[var(--accent)]">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-[18px] bg-[var(--paper-2)] text-[var(--accent)] transition group-hover:-translate-y-0.5 group-hover:shadow-[var(--shadow-sm)]">
           <Icon name="imagePlus" size={25} />
         </div>
-        <p className="mt-3 text-[17px] font-bold">Choose a photo</p>
-        <p className="text-[13px] text-[var(--ink-soft)]">From your gallery or files · or drag &amp; paste</p>
+        <p className="mt-3 text-[16px] font-bold">Choose a reference photo</p>
+        <p className="mt-0.5 text-[11px] text-[var(--ink-soft)]">Gallery, files, drag, or paste</p>
       </button>
 
       <button
         type="button"
         onClick={() => cameraRef.current?.click()}
-        className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[14px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.99]"
+        className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-[14px] bg-[var(--ink)] px-4 py-3 text-[13px] font-semibold text-[var(--paper)] shadow-[var(--shadow-sm)] transition hover:-translate-y-0.5 active:scale-[0.99]"
       >
         <Icon name="camera" size={18} /> Take a photo instead
       </button>
@@ -145,10 +147,10 @@ export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, er
           style={{ background: "color-mix(in srgb, var(--accent) 6%, var(--card))" }}
         >
           <span
-            className="grid h-[34px] w-[34px] flex-none place-items-center rounded-[9px] font-bold text-[var(--accent)]"
+            className="grid h-[34px] w-[34px] flex-none place-items-center rounded-[9px] text-[var(--accent)]"
             style={{ background: "color-mix(in srgb, var(--accent) 14%, var(--card))" }}
           >
-            !
+            <Icon name="help" size={17} />
           </span>
           <span className="text-[var(--ink-soft)]">
             <b className="text-[var(--ink)]">{error}</b> · Try another photo
@@ -156,52 +158,25 @@ export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, er
         </div>
       )}
 
-      <p className="mt-4 text-center text-[13px] text-[var(--ink-soft)]">
-        Your photo never leaves your device.
+      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-[var(--ink-soft)]">
+        <Icon name="check" size={13} className="text-[var(--accent-2)]" /> Your photo never leaves your device
       </p>
 
-      {recent.length > 0 ? (
-        <div className="mt-7">
-          <div className="mb-2.5 flex items-center justify-between">
-            <b className="text-[15px]">Recent</b>
-            <Link href="/history" className="text-[13px] font-semibold text-[var(--accent)]">
-              All projects →
-            </Link>
-          </div>
-          <div className="grid grid-cols-3 gap-2.5">
-            {recent.map((p) => (
-              <button
-                type="button"
-                key={p.id}
-                onClick={() => onOpenProject(p.id)}
-                title={p.name}
-                aria-label={`Open project ${p.name}`}
-                className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--card)] text-left shadow-[var(--shadow-sm)] active:scale-[0.97]"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.thumbDataUrl} alt="" className="aspect-[4/3] w-full object-cover" />
-                <div className="truncate px-2 py-1.5 text-[11px] font-semibold">{p.name}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <ol className="mt-7 grid gap-2.5">
-          {["Upload a photo", "Get the painting + its colors", "Mix them and paint it for real"].map(
-            (step, i) => (
-              <li
-                key={step}
-                className="flex items-center gap-3 rounded-xl bg-[var(--paper-2)] px-3.5 py-3 text-[14px]"
-              >
-                <span className="grid h-[26px] w-[26px] flex-none place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">
-                  {i + 1}
-                </span>
-                {step}
-              </li>
-            ),
-          )}
-        </ol>
-      )}
+      <ol className="mt-7 grid gap-2.5">
+        {["Choose a reference", "Get its palette and painting order", "Mix the colors and paint it for real"].map(
+          (step, i) => (
+            <li
+              key={step}
+              className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--card)] px-3.5 py-3 text-[13px] shadow-[var(--shadow-sm)]"
+            >
+              <span className="grid h-[26px] w-[26px] flex-none place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">
+                {i + 1}
+              </span>
+              {step}
+            </li>
+          ),
+        )}
+      </ol>
     </div>
   );
 }

@@ -135,6 +135,12 @@ const PATHS = {
       <circle cx="12" cy="17.2" r=".8" fill="currentColor" stroke="none" />
     </>
   ),
+  book: (
+    <>
+      <path d="M4 4.5h5.2A2.8 2.8 0 0 1 12 7.3V20a3 3 0 0 0-3-3H4Z" />
+      <path d="M20 4.5h-5.2A2.8 2.8 0 0 0 12 7.3V20a3 3 0 0 1 3-3h5Z" />
+    </>
+  ),
   pipette: (
     <>
       <path d="m14.5 4.5 5 5M12.5 6.5l5 5M16 3l5 5-3 3-5-5Z" />

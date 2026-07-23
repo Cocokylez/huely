@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { rgbToHex } from "@/lib/image/color";
+import { patchProjectWorkspace, readProjectWorkspace } from "@/lib/history/workspace";
 import { Icon } from "@/components/ui/Icon";
 
 interface Props {
@@ -13,6 +14,10 @@ interface Props {
   canvasRef?: React.RefObject<HTMLCanvasElement | null>;
   tools?: WorkspaceToolsState;
   toolbar?: "default" | "desktop-only" | "hidden";
+  /** Saves zoom/pan for this project when provided. */
+  workspaceId?: string | null;
+  /** Captures touch gestures so the page never scrolls behind the full workspace. */
+  immersive?: boolean;
 }
 
 const MIN_SCALE = 1;
@@ -222,6 +227,8 @@ export function WorkspaceView({
   canvasRef,
   tools: controlledTools,
   toolbar = "default",
+  workspaceId,
+  immersive = false,
 }: Props) {
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
@@ -232,6 +239,9 @@ export function WorkspaceView({
   const [scale, setScale] = useState(1);
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
+  const [loadedViewportId, setLoadedViewportId] = useState<string | null>(null);
+  const viewportStateRef = useRef({ scale, tx, ty, loadedViewportId });
+  viewportStateRef.current = { scale, tx, ty, loadedViewportId };
 
   const internalTools = useWorkspaceTools();
   const workspaceTools = controlledTools ?? internalTools;
@@ -242,6 +252,70 @@ export function WorkspaceView({
   const downAt = useRef<{ x: number; y: number } | null>(null);
   const moved = useRef(0);
   const pinch = useRef<{ dist: number; scale: number } | null>(null);
+
+  useEffect(() => {
+    if (!workspaceId) {
+      setLoadedViewportId(null);
+      return;
+    }
+
+    const saved = readProjectWorkspace(workspaceId)?.viewport;
+    const frame = containerRef.current;
+    if (saved && frame) {
+      const restoredScale = Number.isFinite(saved.scale)
+        ? Math.min(MAX_SCALE, Math.max(MIN_SCALE, saved.scale))
+        : 1;
+      const frameWidth = frame.clientWidth;
+      const frameHeight = frame.clientHeight;
+      const minX = Math.min(0, frameWidth - frameWidth * restoredScale);
+      const minY = Math.min(0, frameHeight - frameHeight * restoredScale);
+      const restoredX = Number.isFinite(saved.x) ? saved.x * frameWidth : 0;
+      const restoredY = Number.isFinite(saved.y) ? saved.y * frameHeight : 0;
+      setScale(restoredScale);
+      setTx(Math.min(0, Math.max(minX, restoredX)));
+      setTy(Math.min(0, Math.max(minY, restoredY)));
+    }
+    setLoadedViewportId(workspaceId);
+  }, [workspaceId]);
+
+  useEffect(() => {
+    if (!workspaceId || loadedViewportId !== workspaceId) return;
+    const timer = window.setTimeout(() => {
+      const frame = containerRef.current;
+      if (!frame?.clientWidth || !frame.clientHeight) return;
+      patchProjectWorkspace(workspaceId, {
+        viewport: {
+          scale,
+          x: tx / frame.clientWidth,
+          y: ty / frame.clientHeight,
+        },
+      });
+    }, 220);
+    return () => window.clearTimeout(timer);
+  }, [workspaceId, loadedViewportId, scale, tx, ty]);
+
+  useEffect(
+    () => () => {
+      const current = viewportStateRef.current;
+      const frame = containerRef.current;
+      if (
+        !workspaceId ||
+        current.loadedViewportId !== workspaceId ||
+        !frame?.clientWidth ||
+        !frame.clientHeight
+      ) {
+        return;
+      }
+      patchProjectWorkspace(workspaceId, {
+        viewport: {
+          scale: current.scale,
+          x: current.tx / frame.clientWidth,
+          y: current.ty / frame.clientHeight,
+        },
+      });
+    },
+    [workspaceId],
+  );
 
   useEffect(() => {
     const canvas = ref.current;
@@ -446,7 +520,7 @@ export function WorkspaceView({
           style={{
             aspectRatio: `${width} / ${height}`,
             cursor: scale > 1 ? "grab" : "crosshair",
-            touchAction: scale > 1 ? "none" : "pan-y",
+            touchAction: immersive || scale > 1 ? "none" : "pan-y",
           }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}

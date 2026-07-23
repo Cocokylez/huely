@@ -61,7 +61,13 @@ export function RestoredProject({ project, authed, onNew }: Props) {
 
       <div className="rounded-[18px] bg-[var(--card)] p-2 shadow-[var(--shadow-sm)]">
         {img ? (
-          <WorkspaceView width={img.width} height={img.height} draw={draw} onSample={setSample} />
+          <WorkspaceView
+            width={img.width}
+            height={img.height}
+            draw={draw}
+            onSample={setSample}
+            workspaceId={project.id}
+          />
         ) : (
           <div className="aspect-[4/3] w-full animate-pulse rounded-[14px] bg-[var(--paper-2)]" />
         )}

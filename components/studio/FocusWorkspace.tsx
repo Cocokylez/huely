@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import type { PipelineResult, ViewMode } from "@/lib/image/types";
 import { nearestName } from "@/lib/image/colorNames";
+import {
+  patchProjectWorkspace,
+  readProjectWorkspace,
+  type WorkspacePanel,
+} from "@/lib/history/workspace";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { Icon } from "@/components/ui/Icon";
 import { ImageCanvas } from "./ImageCanvas";
@@ -21,6 +26,7 @@ interface Props {
   onToggleDone: (i: number) => void;
   focusColor: number | null;
   onFocus: (i: number) => void;
+  onRestoreFocus: (i: number | null) => void;
   onDoneNext: () => void;
   onClearFocus: () => void;
   onExit: () => void;
@@ -43,12 +49,86 @@ type MobileSheet = "views" | "transfer" | "analyze" | "paint" | "compare" | null
  * side panel on desktop and one shared tool dock on mobile so the image stays clear.
  */
 export function FocusWorkspace(props: Props) {
-  const { projectId, result, view, onView, onSample, done, onToggleDone, focusColor, onFocus, onExit } = props;
+  const {
+    projectId,
+    result,
+    view,
+    onView,
+    onSample,
+    done,
+    onToggleDone,
+    focusColor,
+    onFocus,
+    onRestoreFocus,
+    onExit,
+  } = props;
   const { open: mixerOpen, openMixer, setTarget } = useMixer();
   const workspaceTools = useWorkspaceTools();
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
-  const [panelTab, setPanelTab] = useState<"colors" | "steps" | "compare">("colors");
+  const [panelTab, setPanelTab] = useState<WorkspacePanel>("colors");
   const [sampled, setSampled] = useState<string | null>(null);
+  const [loadedProjectId, setLoadedProjectId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!projectId) {
+      setLoadedProjectId(null);
+      return;
+    }
+
+    const saved = readProjectWorkspace(projectId)?.settings;
+    if (saved) {
+      const adjustment = (value: unknown) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? Math.min(200, Math.max(0, number)) : 100;
+      };
+      if (["oil", "original", "pbn"].includes(saved.view)) onView(saved.view);
+      workspaceTools.setGridN([0, 3, 4, 6, 8].includes(saved.gridN) ? saved.gridN : 0);
+      workspaceTools.setGuides(Number.isInteger(saved.guides) ? Math.min(3, Math.max(0, saved.guides)) : 0);
+      workspaceTools.setGray(Boolean(saved.gray));
+      workspaceTools.setFlip(Boolean(saved.flip));
+      workspaceTools.setAdj({
+        b: adjustment(saved.adjustments?.b),
+        c: adjustment(saved.adjustments?.c),
+        s: adjustment(saved.adjustments?.s),
+      });
+      const restoredFocus =
+        saved.focusColor != null && saved.focusColor >= 0 && saved.focusColor < result.palette.length
+          ? saved.focusColor
+          : null;
+      onRestoreFocus(restoredFocus);
+      setPanelTab(["colors", "steps", "compare"].includes(saved.panel) ? saved.panel : "colors");
+    }
+    setLoadedProjectId(projectId);
+    // Restore once when a project enters the workspace; live changes are saved below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!projectId || loadedProjectId !== projectId) return;
+    patchProjectWorkspace(projectId, {
+      settings: {
+        view,
+        gridN: workspaceTools.gridN,
+        guides: workspaceTools.guides,
+        gray: workspaceTools.gray,
+        flip: workspaceTools.flip,
+        adjustments: workspaceTools.adj,
+        focusColor,
+        panel: panelTab,
+      },
+    });
+  }, [
+    projectId,
+    loadedProjectId,
+    view,
+    workspaceTools.gridN,
+    workspaceTools.guides,
+    workspaceTools.gray,
+    workspaceTools.flip,
+    workspaceTools.adj,
+    focusColor,
+    panelTab,
+  ]);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
@@ -288,6 +368,8 @@ export function FocusWorkspace(props: Props) {
                 focus={focusColor}
                 workspaceTools={workspaceTools}
                 toolbar="hidden"
+                workspaceId={projectId}
+                immersive
               />
             </div>
           </div>

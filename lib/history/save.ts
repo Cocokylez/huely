@@ -1,4 +1,5 @@
 import type { HistoryProject } from "./types";
+import { clearProjectWorkspace } from "./workspace";
 import {
   localSave,
   localGet,
@@ -96,6 +97,7 @@ export async function removeProject(authed: boolean, id: string): Promise<void> 
   } else {
     await localRemove(id);
   }
+  clearProjectWorkspace(id);
   announceStorageChange();
 }
 

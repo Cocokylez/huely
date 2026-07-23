@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useMixer } from "@/components/mixer/MixerProvider";
+import { useCreateFlow } from "@/components/create/CreateProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/AccountMenu";
 import { Icon, type IconName } from "@/components/ui/Icon";
@@ -11,7 +12,7 @@ import { Icon, type IconName } from "@/components/ui/Icon";
 export type NavUser = { email: string; displayName: string | null } | null;
 
 function itemClass(active: boolean) {
-  return `group flex min-h-[54px] min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-2xl px-1 text-[10px] font-semibold transition ${
+  return `group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 text-[9px] font-semibold transition ${
     active
       ? "bg-[var(--paper-2)] text-[var(--accent)]"
       : "text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
@@ -25,14 +26,15 @@ function NavIcon({ name, active }: { name: IconName; active: boolean }) {
         active ? "text-[var(--accent)]" : "text-[var(--ink-soft)] group-hover:text-[var(--ink)]"
       }`}
     >
-      <Icon name={name} size={19} strokeWidth={active ? 2.2 : 1.8} />
+      <Icon name={name} size={18} strokeWidth={active ? 2.2 : 1.8} />
     </span>
   );
 }
 
-/** Persistent bottom app navigation. Full-screen workspace layers replace it. */
+/** Home-level navigation. The full-screen workspace replaces it with contextual tools. */
 export function Navbar({ user }: { user: NavUser }) {
-  const { open, openMixer, closeMixer } = useMixer();
+  const { open: mixerOpen, openMixer, closeMixer } = useMixer();
+  const { open: createOpen, openCreate, closeCreate } = useCreateFlow();
   const pathname = usePathname();
   const [accountOpen, setAccountOpen] = useState(false);
 
@@ -45,18 +47,26 @@ export function Navbar({ user }: { user: NavUser }) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [accountOpen]);
 
-  const createActive = pathname === "/";
-  const projectsActive = pathname === "/history";
-  const accountActive = accountOpen || ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
+  const projectsActive = pathname === "/" || pathname === "/history" || pathname.startsWith("/studio");
+  const createActive = createOpen || pathname === "/create";
+  const guideActive = pathname === "/guide";
+  const accountActive =
+    accountOpen || ["/login", "/signup", "/forgot-password", "/reset-password"].includes(pathname);
   const accountName = user?.displayName || user?.email || "Guest artist";
   const initial = accountName.charAt(0).toUpperCase();
+
+  const closePanels = () => {
+    setAccountOpen(false);
+    closeMixer();
+    closeCreate();
+  };
 
   return (
     <div
       className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
-      <div className="relative mx-auto max-w-md">
+      <div className="relative mx-auto max-w-lg">
         {accountOpen && (
           <>
             <button
@@ -122,37 +132,69 @@ export function Navbar({ user }: { user: NavUser }) {
 
         <nav
           aria-label="Main navigation"
-          className="pointer-events-auto relative z-10 grid grid-cols-4 gap-1 rounded-[22px] border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 shadow-[0_12px_38px_rgba(43,39,35,0.18)] backdrop-blur-xl"
+          className="pointer-events-auto relative z-10 grid grid-cols-5 items-end gap-0.5 rounded-[22px] border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 shadow-[0_12px_38px_rgba(43,39,35,0.18)] backdrop-blur-xl"
         >
-          <Link href="/" aria-current={createActive ? "page" : undefined} className={itemClass(createActive)}>
-            <NavIcon name="imagePlus" active={createActive} />
-            Create
-          </Link>
           <Link
-            href="/history"
+            href="/"
+            onClick={closePanels}
             aria-current={projectsActive ? "page" : undefined}
             className={itemClass(projectsActive)}
           >
             <NavIcon name="projects" active={projectsActive} />
             Projects
           </Link>
+
           <button
             type="button"
-            aria-pressed={open}
+            aria-pressed={mixerOpen}
             onClick={() => {
               setAccountOpen(false);
+              closeCreate();
               openMixer();
             }}
-            className={itemClass(open)}
+            className={itemClass(mixerOpen)}
           >
-            <NavIcon name="palette" active={open} />
+            <NavIcon name="palette" active={mixerOpen} />
             Paint Lab
           </button>
+
+          <button
+            type="button"
+            aria-pressed={createActive}
+            aria-label="Create a new painting project"
+            onClick={() => {
+              setAccountOpen(false);
+              closeMixer();
+              openCreate();
+            }}
+            className="group relative flex min-h-[56px] min-w-0 flex-col items-center justify-end rounded-2xl px-0.5 pb-1 text-[9px] font-bold text-[var(--accent)]"
+          >
+            <span
+              className={`absolute -top-6 grid h-14 w-14 place-items-center rounded-full border-[5px] border-[var(--card-2)] text-white shadow-[0_8px_22px_rgba(198,93,59,0.35)] transition group-active:scale-95 ${
+                createActive ? "bg-[var(--ink)]" : "bg-[var(--accent)]"
+              }`}
+            >
+              <Icon name="plus" size={24} strokeWidth={2.3} />
+            </span>
+            <span>Create</span>
+          </button>
+
+          <Link
+            href="/guide"
+            onClick={closePanels}
+            aria-current={guideActive ? "page" : undefined}
+            className={itemClass(guideActive)}
+          >
+            <NavIcon name="book" active={guideActive} />
+            Guide
+          </Link>
+
           <button
             type="button"
             aria-pressed={accountOpen}
             onClick={() => {
               closeMixer();
+              closeCreate();
               setAccountOpen((current) => !current);
             }}
             className={itemClass(accountActive)}
