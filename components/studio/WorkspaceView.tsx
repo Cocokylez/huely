@@ -10,6 +10,8 @@ interface Props {
   draw: (ctx: CanvasRenderingContext2D) => void;
   onSample: (hex: string) => void;
   canvasRef?: React.RefObject<HTMLCanvasElement | null>;
+  tools?: WorkspaceToolsState;
+  toolbar?: "default" | "desktop-only" | "hidden";
 }
 
 const MIN_SCALE = 1;
@@ -18,12 +20,150 @@ const TAP_SLOP = 6;
 const GRID_STEPS = [0, 3, 4, 6, 8];
 const GUIDE_LABELS = ["Guides", "Center", "Diagonals", "Center + diag"];
 
-const toolChip = (active: boolean) =>
-  `shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-[12px] font-semibold transition active:scale-95 ${
+const toolChip = (active: boolean, panel: boolean) =>
+  `${panel ? "w-full justify-center" : "shrink-0"} flex items-center whitespace-nowrap rounded-full border px-3 py-2 text-[12px] font-semibold transition active:scale-95 ${
     active
       ? "border-[var(--accent)] bg-[var(--accent)] text-white"
       : "border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
   }`;
+
+export function useWorkspaceTools() {
+  const [gridN, setGridN] = useState(0);
+  const [guides, setGuides] = useState(0);
+  const [gray, setGray] = useState(false);
+  const [flip, setFlip] = useState(false);
+  const [showAdjust, setShowAdjust] = useState(false);
+  const [adj, setAdj] = useState({ b: 100, c: 100, s: 100 });
+
+  return {
+    gridN,
+    setGridN,
+    guides,
+    setGuides,
+    gray,
+    setGray,
+    flip,
+    setFlip,
+    showAdjust,
+    setShowAdjust,
+    adj,
+    setAdj,
+  };
+}
+
+export type WorkspaceToolsState = ReturnType<typeof useWorkspaceTools>;
+
+export function WorkspaceTools({
+  tools,
+  layout = "row",
+}: {
+  tools: WorkspaceToolsState;
+  layout?: "row" | "panel";
+}) {
+  const {
+    gridN,
+    setGridN,
+    guides,
+    setGuides,
+    gray,
+    setGray,
+    flip,
+    setFlip,
+    showAdjust,
+    setShowAdjust,
+    adj,
+    setAdj,
+  } = tools;
+  const panel = layout === "panel";
+  const adjusted = adj.b !== 100 || adj.c !== 100 || adj.s !== 100;
+
+  return (
+    <div>
+      <div
+        className={
+          panel
+            ? "grid grid-cols-2 gap-2"
+            : "mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]"
+        }
+      >
+        <button
+          type="button"
+          onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
+          className={toolChip(gridN > 0, panel)}
+          title="Grid method — divide the reference into cells"
+        >
+          <span aria-hidden>⊞</span> {gridN > 0 ? `Grid ${gridN}` : "Grid"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setGuides((g) => (g + 1) % 4)}
+          className={toolChip(guides > 0, panel)}
+          title="Composition guides"
+        >
+          <span aria-hidden>⌖</span> {GUIDE_LABELS[guides]}
+        </button>
+        <button
+          type="button"
+          onClick={() => setGray((g) => !g)}
+          className={toolChip(gray, panel)}
+          title="Value / grayscale study"
+        >
+          <span aria-hidden>◐</span> Value
+        </button>
+        <button
+          type="button"
+          onClick={() => setShowAdjust((s) => !s)}
+          className={toolChip(showAdjust || adjusted, panel)}
+          title="Brightness / contrast / saturation"
+        >
+          <span aria-hidden>☼</span> Adjust
+        </button>
+        <button
+          type="button"
+          onClick={() => setFlip((f) => !f)}
+          className={toolChip(flip, panel)}
+          title="Flip horizontally to spot errors"
+        >
+          <span aria-hidden>⇄</span> Flip
+        </button>
+      </div>
+
+      {showAdjust && (
+        <div className={`${panel ? "mt-3" : "mb-2"} grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)] p-3`}>
+          {(
+            [
+              ["Brightness", "b"],
+              ["Contrast", "c"],
+              ["Saturation", "s"],
+            ] as const
+          ).map(([label, key]) => (
+            <label key={key} className="flex items-center gap-3 text-[12px]">
+              <span className="w-[70px] flex-none text-[var(--ink-soft)]">{label}</span>
+              <input
+                type="range"
+                min={0}
+                max={200}
+                value={adj[key]}
+                onChange={(event) => setAdj((current) => ({ ...current, [key]: Number(event.target.value) }))}
+                className="h-1 flex-1 accent-[var(--accent)]"
+              />
+              <span className="w-[38px] flex-none text-right font-mono text-[var(--ink-soft)]">
+                {adj[key]}%
+              </span>
+            </label>
+          ))}
+          <button
+            type="button"
+            onClick={() => setAdj({ b: 100, c: 100, s: 100 })}
+            className="justify-self-start rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
+          >
+            Reset adjustments
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Reusable painting workspace: zoom/pan + a full artist toolset (grid method,
@@ -31,7 +171,15 @@ const toolChip = (active: boolean) =>
  * flip, focus/fullscreen) + tap-to-sample eyedropper. Renders whatever `draw`
  * paints; the eyedropper always reads the true (unadjusted) pixel color.
  */
-export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Props) {
+export function WorkspaceView({
+  width,
+  height,
+  draw,
+  onSample,
+  canvasRef,
+  tools: controlledTools,
+  toolbar = "default",
+}: Props) {
   const localRef = useRef<HTMLCanvasElement>(null);
   const ref = canvasRef ?? localRef;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -40,12 +188,9 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
   const [tx, setTx] = useState(0);
   const [ty, setTy] = useState(0);
 
-  const [gridN, setGridN] = useState(0);
-  const [guides, setGuides] = useState(0);
-  const [gray, setGray] = useState(false);
-  const [flip, setFlip] = useState(false);
-  const [showAdjust, setShowAdjust] = useState(false);
-  const [adj, setAdj] = useState({ b: 100, c: 100, s: 100 });
+  const internalTools = useWorkspaceTools();
+  const workspaceTools = controlledTools ?? internalTools;
+  const { gridN, guides, gray, flip, adj } = workspaceTools;
 
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
@@ -200,64 +345,11 @@ export function WorkspaceView({ width, height, draw, onSample, canvasRef }: Prop
       .filter(Boolean)
       .join(" ") || "none";
 
-  const adjusted = adj.b !== 100 || adj.c !== 100 || adj.s !== 100;
-
   return (
     <div>
-      <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]">
-        <button
-          onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
-          className={toolChip(gridN > 0)}
-          title="Grid method — divide the reference into cells"
-        >
-          ⊞ {gridN > 0 ? `Grid ${gridN}` : "Grid"}
-        </button>
-        <button
-          onClick={() => setGuides((g) => (g + 1) % 4)}
-          className={toolChip(guides > 0)}
-          title="Composition guides"
-        >
-          ⌖ {GUIDE_LABELS[guides]}
-        </button>
-        <button onClick={() => setGray((g) => !g)} className={toolChip(gray)} title="Value / grayscale study">
-          ◐ Value
-        </button>
-        <button onClick={() => setShowAdjust((s) => !s)} className={toolChip(showAdjust || adjusted)} title="Brightness / contrast / saturation">
-          ⚙ Adjust
-        </button>
-        <button onClick={() => setFlip((f) => !f)} className={toolChip(flip)} title="Flip horizontally to spot errors">
-          ⇄ Flip
-        </button>
-      </div>
-
-      {showAdjust && (
-        <div className="mb-2 grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)] p-3">
-          {(
-            [
-              ["Brightness", "b"],
-              ["Contrast", "c"],
-              ["Saturation", "s"],
-            ] as const
-          ).map(([label, key]) => (
-            <label key={key} className="flex items-center gap-3 text-[12px]">
-              <span className="w-[70px] flex-none text-[var(--ink-soft)]">{label}</span>
-              <input
-                type="range"
-                min={0}
-                max={200}
-                value={adj[key]}
-                onChange={(e) => setAdj((a) => ({ ...a, [key]: Number(e.target.value) }))}
-                className="h-1 flex-1 accent-[var(--accent)]"
-              />
-              <span className="w-[38px] flex-none text-right font-mono text-[var(--ink-soft)]">{adj[key]}%</span>
-            </label>
-          ))}
-          <button
-            onClick={() => setAdj({ b: 100, c: 100, s: 100 })}
-            className="justify-self-start rounded-full border border-[var(--line)] bg-[var(--paper-2)] px-3 py-1 text-[11px] font-semibold text-[var(--ink-soft)] hover:text-[var(--accent)]"
-          >
-            Reset adjustments
-          </button>
+      {toolbar !== "hidden" && (
+        <div className={toolbar === "desktop-only" ? "hidden md:block" : undefined}>
+          <WorkspaceTools tools={workspaceTools} />
         </div>
       )}
 

@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import type { PipelineResult, ViewMode } from "@/lib/image/types";
 import { mix } from "@/lib/image/color";
-import { WorkspaceView } from "./WorkspaceView";
+import { WorkspaceView, type WorkspaceToolsState } from "./WorkspaceView";
 
 interface Props {
   result: PipelineResult;
@@ -13,6 +13,8 @@ interface Props {
   done?: Set<number>;
   /** When set, only this palette color's regions stay vivid; the rest fades. */
   focus?: number | null;
+  workspaceTools?: WorkspaceToolsState;
+  toolbar?: "default" | "desktop-only" | "hidden";
 }
 
 function readVar(name: string, fallback: [number, number, number]): [number, number, number] {
@@ -29,7 +31,16 @@ function readVar(name: string, fallback: [number, number, number]): [number, num
 
 /** Studio canvas — draws the selected layer (with progress fade + numbers on
  *  the by-numbers view) into the reusable painting workspace. */
-export function ImageCanvas({ result, view, onSample, canvasRef, done, focus }: Props) {
+export function ImageCanvas({
+  result,
+  view,
+  onSample,
+  canvasRef,
+  done,
+  focus,
+  workspaceTools,
+  toolbar,
+}: Props) {
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D) => {
       const layer =
@@ -84,6 +95,8 @@ export function ImageCanvas({ result, view, onSample, canvasRef, done, focus }: 
       draw={draw}
       onSample={onSample}
       canvasRef={canvasRef}
+      tools={workspaceTools}
+      toolbar={toolbar}
     />
   );
 }
