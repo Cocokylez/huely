@@ -147,7 +147,7 @@ function serializedBytes(value: unknown): number {
 function storeStats(values: unknown[]): DeviceStoreStats {
   return {
     count: values.length,
-    bytes: values.reduce((total, value) => total + serializedBytes(value), 0),
+    bytes: values.reduce<number>((total, value) => total + serializedBytes(value), 0),
   };
 }
 
