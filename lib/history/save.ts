@@ -3,6 +3,7 @@ import {
   localSave,
   localGet,
   localList,
+  localRemove,
   localRemoveProjectRecord,
   saveSource,
   getSource,
@@ -11,7 +12,20 @@ import {
   getShot,
   removeShot,
 } from "./local";
-import { cloudSave, cloudUpdate, cloudGet, cloudList, cloudUpdateDone } from "./cloud";
+import {
+  cloudSave,
+  cloudUpdate,
+  cloudGet,
+  cloudList,
+  cloudUpdateDone,
+  cloudRemove,
+} from "./cloud";
+
+export const HUELY_STORAGE_CHANGED = "huely-storage-changed";
+
+function announceStorageChange() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(HUELY_STORAGE_CHANGED));
+}
 
 export interface GuestMigrationResult {
   moved: number;
@@ -51,19 +65,38 @@ export async function migrateGuestProjects(): Promise<GuestMigrationResult> {
     }
   }
 
+  if (result.moved || result.alreadyCloud) announceStorageChange();
+
   return result;
 }
 
 /** Save a new project — cloud when signed in, local IndexedDB otherwise. */
 export async function saveProject(authed: boolean, project: HistoryProject): Promise<void> {
   if (authed) await cloudSave(project);
-  else await localSave(project);
+  else {
+    await localSave(project);
+    announceStorageChange();
+  }
 }
 
 /** Update an existing project (rename, re-quantize, mixer changes). */
 export async function updateProject(authed: boolean, project: HistoryProject): Promise<void> {
   if (authed) await cloudUpdate(project);
-  else await localSave(project); // IndexedDB put upserts
+  else {
+    await localSave(project); // IndexedDB put upserts
+    announceStorageChange();
+  }
+}
+
+/** Delete the project and any device-only media associated with its id. */
+export async function removeProject(authed: boolean, id: string): Promise<void> {
+  if (authed) {
+    await cloudRemove(id);
+    await Promise.all([removeSource(id).catch(() => {}), removeShot(id).catch(() => {})]);
+  } else {
+    await localRemove(id);
+  }
+  announceStorageChange();
 }
 
 /** Fetch one project by id from whichever store is active. */
@@ -82,6 +115,7 @@ export async function getProject(
 export async function cacheSource(id: string, dataUrl: string): Promise<void> {
   try {
     await saveSource(id, dataUrl);
+    announceStorageChange();
   } catch {
     // Storage full or unavailable — fall back to the thumbnail on reopen.
   }
@@ -98,6 +132,7 @@ export async function getCachedSource(id: string): Promise<string | undefined> {
 export async function removeCachedSource(id: string): Promise<void> {
   try {
     await removeSource(id);
+    announceStorageChange();
   } catch {
     // best effort
   }
@@ -110,6 +145,7 @@ export async function removeCachedSource(id: string): Promise<void> {
 export async function cacheShot(id: string, dataUrl: string): Promise<void> {
   try {
     await saveShot(id, dataUrl);
+    announceStorageChange();
   } catch {
     // storage full/unavailable — the compare view just won't have a photo
   }
@@ -126,6 +162,7 @@ export async function getCachedShot(id: string): Promise<string | undefined> {
 export async function removeCachedShot(id: string): Promise<void> {
   try {
     await removeShot(id);
+    announceStorageChange();
   } catch {
     // best effort
   }
@@ -137,6 +174,9 @@ export async function patchDone(authed: boolean, id: string, done: number[]): Pr
     await cloudUpdateDone(id, done);
   } else {
     const existing = await localGet(id);
-    if (existing) await localSave({ ...existing, done });
+    if (existing) {
+      await localSave({ ...existing, done });
+      announceStorageChange();
+    }
   }
 }

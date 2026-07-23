@@ -19,6 +19,18 @@ interface HuelyDB extends DBSchema {
   };
 }
 
+export interface DeviceStoreStats {
+  count: number;
+  bytes: number;
+}
+
+export interface DeviceStorageStats {
+  projects: DeviceStoreStats;
+  sources: DeviceStoreStats;
+  shots: DeviceStoreStats;
+  totalBytes: number;
+}
+
 let dbPromise: Promise<IDBPDatabase<HuelyDB>> | null = null;
 
 function getDb() {
@@ -91,9 +103,13 @@ export async function localGet(id: string): Promise<HistoryProject | undefined> 
 
 export async function localRemove(id: string): Promise<void> {
   const db = await getDb();
-  await db.delete("projects", id);
-  await db.delete("sources", id).catch(() => {});
-  await db.delete("shots", id).catch(() => {});
+  const tx = db.transaction(["projects", "sources", "shots"], "readwrite");
+  await Promise.all([
+    tx.objectStore("projects").delete(id),
+    tx.objectStore("sources").delete(id),
+    tx.objectStore("shots").delete(id),
+  ]);
+  await tx.done;
 }
 
 /**
@@ -115,5 +131,54 @@ export async function localRename(id: string, name: string): Promise<void> {
 
 export async function localClear(): Promise<void> {
   const db = await getDb();
-  await db.clear("projects");
+  const tx = db.transaction(["projects", "sources", "shots"], "readwrite");
+  await Promise.all([
+    tx.objectStore("projects").clear(),
+    tx.objectStore("sources").clear(),
+    tx.objectStore("shots").clear(),
+  ]);
+  await tx.done;
+}
+
+function serializedBytes(value: unknown): number {
+  return new Blob([JSON.stringify(value) ?? ""]).size;
+}
+
+function storeStats(values: unknown[]): DeviceStoreStats {
+  return {
+    count: values.length,
+    bytes: values.reduce((total, value) => total + serializedBytes(value), 0),
+  };
+}
+
+/** Estimated Huely IndexedDB usage, split into data and recoverable media. */
+export async function getDeviceStorageStats(): Promise<DeviceStorageStats> {
+  const db = await getDb();
+  const [projects, sources, shots] = await Promise.all([
+    db.getAll("projects"),
+    db.getAll("sources"),
+    db.getAll("shots"),
+  ]);
+  const projectStats = storeStats(projects);
+  const sourceStats = storeStats(sources);
+  const shotStats = storeStats(shots);
+
+  return {
+    projects: projectStats,
+    sources: sourceStats,
+    shots: shotStats,
+    totalBytes: projectStats.bytes + sourceStats.bytes + shotStats.bytes,
+  };
+}
+
+/** Clear only cached originals. Project cards, palettes, and canvas photos stay. */
+export async function clearCachedSources(): Promise<void> {
+  const db = await getDb();
+  await db.clear("sources");
+}
+
+/** Clear only photos of the painter's physical canvas. Everything else stays. */
+export async function clearCachedShots(): Promise<void> {
+  const db = await getDb();
+  await db.clear("shots");
 }

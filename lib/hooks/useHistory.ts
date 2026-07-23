@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { HistoryProject } from "@/lib/history/types";
-import { localList, localRemove, localRename } from "@/lib/history/local";
-import { cloudList, cloudRemove, cloudRename } from "@/lib/history/cloud";
+import { localList, localRename } from "@/lib/history/local";
+import { cloudList, cloudRename } from "@/lib/history/cloud";
+import { removeProject } from "@/lib/history/save";
 
 /** Unified history: cloud (Supabase) when signed in, local (IndexedDB) otherwise. */
 export function useHistory(authed: boolean) {
@@ -36,8 +37,7 @@ export function useHistory(authed: boolean) {
 
   const remove = useCallback(
     async (id: string) => {
-      if (authed) await cloudRemove(id);
-      else await localRemove(id);
+      await removeProject(authed, id);
       await refresh();
     },
     [authed, refresh],

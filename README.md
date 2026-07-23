@@ -11,6 +11,7 @@ Turn a photo into colors you can **paint by hand** — an oil-paint reference, t
 - **Color Mixer** — blends like real pigment (RYB subtractive model, so blue + yellow → green) and **names any shade**.
 - **Eyedropper** — tap the image to grab any pixel's exact color.
 - **History** — save palettes; kept locally for guests, synced to your account when signed in.
+- **Device storage manager** — see cache usage, protect it from browser cleanup, or safely clear original and canvas-photo caches separately.
 - All image processing runs **client-side in a Web Worker** — photos never leave your device.
 
 ## Stack

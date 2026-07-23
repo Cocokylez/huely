@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useHistory } from "@/lib/hooks/useHistory";
+import { StorageManager } from "@/components/history/StorageManager";
 
 /** History — "My projects" (spec 03 · History). */
 export function HistoryGrid({ authed }: { authed: boolean }) {
@@ -125,7 +126,11 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
         </div>
       )}
 
-      <div className="mt-5 rounded-[10px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3 text-[12px] leading-relaxed text-[var(--ink-soft)]">
+      <div className="mt-5">
+        <StorageManager authed={authed} />
+      </div>
+
+      <div className="mt-3 rounded-[10px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3 text-[12px] leading-relaxed text-[var(--ink-soft)]">
         <b className="text-[var(--ink)]">Private by default.</b>{" "}
         {authed ? (
           <>Your projects sync to your account — palettes and thumbnails only, never photos.</>
