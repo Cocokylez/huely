@@ -21,8 +21,17 @@ const TAP_SLOP = 6;
 const GRID_STEPS = [0, 3, 4, 6, 8];
 const GUIDE_LABELS = ["Guides", "Center", "Diagonals", "Center + diag"];
 
-const toolChip = (active: boolean, panel: boolean) =>
-  `${panel ? "w-full justify-center" : "shrink-0"} flex items-center whitespace-nowrap rounded-full border px-3 py-2 text-[12px] font-semibold transition active:scale-95 ${
+export type WorkspaceToolGroup = "all" | "transfer" | "analyze";
+type WorkspaceToolLayout = "row" | "panel" | "rail";
+
+const toolChip = (active: boolean, layout: WorkspaceToolLayout) =>
+  `${
+    layout === "panel"
+      ? "w-full justify-center px-3 text-[12px]"
+      : layout === "rail"
+        ? "w-[58px] flex-col justify-center gap-1 px-1 text-[9px]"
+        : "shrink-0 px-3 text-[12px]"
+  } flex items-center whitespace-nowrap rounded-xl border py-2 font-semibold transition active:scale-95 ${
     active
       ? "border-[var(--accent)] bg-[var(--accent)] text-white"
       : "border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
@@ -57,9 +66,11 @@ export type WorkspaceToolsState = ReturnType<typeof useWorkspaceTools>;
 export function WorkspaceTools({
   tools,
   layout = "row",
+  group = "all",
 }: {
   tools: WorkspaceToolsState;
-  layout?: "row" | "panel";
+  layout?: WorkspaceToolLayout;
+  group?: WorkspaceToolGroup;
 }) {
   const {
     gridN,
@@ -76,71 +87,92 @@ export function WorkspaceTools({
     setAdj,
   } = tools;
   const panel = layout === "panel";
+  const rail = layout === "rail";
+  const showTransfer = group === "all" || group === "transfer";
+  const showAnalyze = group === "all" || group === "analyze";
   const adjusted = adj.b !== 100 || adj.c !== 100 || adj.s !== 100;
 
   return (
-    <div>
+    <div className={rail ? "relative" : undefined}>
       <div
         className={
           panel
             ? "grid grid-cols-2 gap-2"
-            : "mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]"
+            : rail
+              ? "flex flex-col items-center gap-1.5"
+              : "mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5 [scrollbar-width:none]"
         }
       >
-        <button
-          type="button"
-          onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
-          aria-pressed={gridN > 0}
-          aria-label={gridN > 0 ? `Grid ${gridN} is on. Choose the next grid size` : "Turn on a painting grid"}
-          className={toolChip(gridN > 0, panel)}
-          title="Grid method — divide the reference into cells"
-        >
-          <Icon name="grid" size={15} /> {gridN > 0 ? `Grid ${gridN}` : "Grid"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setGuides((g) => (g + 1) % 4)}
-          aria-pressed={guides > 0}
-          aria-label={guides > 0 ? `${GUIDE_LABELS[guides]} are on. Choose the next guide` : "Turn on composition guides"}
-          className={toolChip(guides > 0, panel)}
-          title="Composition guides"
-        >
-          <Icon name="guides" size={15} /> {GUIDE_LABELS[guides]}
-        </button>
-        <button
-          type="button"
-          onClick={() => setGray((g) => !g)}
-          aria-pressed={gray}
-          aria-label={gray ? "Turn off value study" : "Turn on value study"}
-          className={toolChip(gray, panel)}
-          title="Value / grayscale study"
-        >
-          <Icon name="value" size={15} /> Value
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowAdjust((s) => !s)}
-          aria-expanded={showAdjust}
-          aria-label={showAdjust ? "Close image adjustments" : "Open image adjustments"}
-          className={toolChip(showAdjust || adjusted, panel)}
-          title="Brightness / contrast / saturation"
-        >
-          <Icon name="sliders" size={15} /> Adjust
-        </button>
-        <button
-          type="button"
-          onClick={() => setFlip((f) => !f)}
-          aria-pressed={flip}
-          aria-label={flip ? "Restore the original image direction" : "Flip the image horizontally"}
-          className={toolChip(flip, panel)}
-          title="Flip horizontally to spot errors"
-        >
-          <Icon name="flip" size={15} /> Flip
-        </button>
+        {showTransfer && (
+          <>
+            <button
+              type="button"
+              onClick={() => setGridN((n) => GRID_STEPS[(GRID_STEPS.indexOf(n) + 1) % GRID_STEPS.length])}
+              aria-pressed={gridN > 0}
+              aria-label={gridN > 0 ? `Grid ${gridN} is on. Choose the next grid size` : "Turn on a painting grid"}
+              className={toolChip(gridN > 0, layout)}
+              title="Grid method — divide the reference into cells"
+            >
+              <Icon name="grid" size={rail ? 18 : 15} /> {gridN > 0 ? `Grid ${gridN}` : "Grid"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setGuides((g) => (g + 1) % 4)}
+              aria-pressed={guides > 0}
+              aria-label={guides > 0 ? `${GUIDE_LABELS[guides]} are on. Choose the next guide` : "Turn on composition guides"}
+              className={toolChip(guides > 0, layout)}
+              title="Composition guides"
+            >
+              <Icon name="guides" size={rail ? 18 : 15} /> {rail && guides > 0 ? "Guides" : GUIDE_LABELS[guides]}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFlip((f) => !f)}
+              aria-pressed={flip}
+              aria-label={flip ? "Restore the original image direction" : "Flip the image horizontally"}
+              className={toolChip(flip, layout)}
+              title="Flip horizontally to spot errors"
+            >
+              <Icon name="flip" size={rail ? 18 : 15} /> Flip
+            </button>
+          </>
+        )}
+        {showAnalyze && (
+          <>
+            <button
+              type="button"
+              onClick={() => setGray((g) => !g)}
+              aria-pressed={gray}
+              aria-label={gray ? "Turn off value study" : "Turn on value study"}
+              className={toolChip(gray, layout)}
+              title="Value / grayscale study"
+            >
+              <Icon name="value" size={rail ? 18 : 15} /> Value
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAdjust((s) => !s)}
+              aria-expanded={showAdjust}
+              aria-label={showAdjust ? "Close image adjustments" : "Open image adjustments"}
+              className={toolChip(showAdjust || adjusted, layout)}
+              title="Brightness / contrast / saturation"
+            >
+              <Icon name="sliders" size={rail ? 18 : 15} /> Adjust
+            </button>
+          </>
+        )}
       </div>
 
-      {showAdjust && (
-        <div className={`${panel ? "mt-3" : "mb-2"} grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)] p-3`}>
+      {showAnalyze && showAdjust && (
+        <div
+          className={`${
+            rail
+              ? "absolute left-[calc(100%+0.75rem)] top-0 z-30 w-72 shadow-[var(--shadow)]"
+              : panel
+                ? "mt-3"
+                : "mb-2"
+          } grid gap-2 rounded-xl border border-[var(--line)] bg-[var(--card)] p-3`}
+        >
           {(
             [
               ["Brightness", "b"],

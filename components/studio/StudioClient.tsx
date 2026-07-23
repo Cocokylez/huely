@@ -77,6 +77,7 @@ export function StudioClient({ authed, openId }: Props) {
   const [focusMode, setFocusMode] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const guideCheckedRef = useRef(false);
+  const openWorkspaceOnReadyRef = useRef(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -106,6 +107,7 @@ export function StudioClient({ authed, openId }: Props) {
           setFocusColor(null);
           setSample(null);
           setView("oil");
+          openWorkspaceOnReadyRef.current = true;
           pendingSaveRef.current = null;
           await processDataUrl(src, p.colorCount);
         } else {
@@ -131,6 +133,11 @@ export function StudioClient({ authed, openId }: Props) {
     guideCheckedRef.current = true;
     if (shouldShowBeginnerGuide()) setGuideOpen(true);
   }, [result]);
+  useEffect(() => {
+    if (status !== "ready" || !result || !openWorkspaceOnReadyRef.current) return;
+    openWorkspaceOnReadyRef.current = false;
+    setFocusMode(true);
+  }, [result, status]);
   useEffect(() => () => setMixSource([]), []);
 
   // Auto-save on process; update on re-quantize.
@@ -179,6 +186,7 @@ export function StudioClient({ authed, openId }: Props) {
       setFocusColor(null);
       setFocusMode(false);
       setGuideOpen(false);
+      openWorkspaceOnReadyRef.current = true;
       setProjectId(null);
       setSaved(false);
       pendingSaveRef.current = "new";
@@ -254,6 +262,7 @@ export function StudioClient({ authed, openId }: Props) {
     setFocusColor(null);
     setFocusMode(false);
     setGuideOpen(false);
+    openWorkspaceOnReadyRef.current = true;
     setProjectId(null);
     setSaved(false);
     reset();

@@ -24,13 +24,16 @@ interface Props {
   onExit: () => void;
 }
 
-const VIEWS: { id: ViewMode; label: string; short: string }[] = [
-  { id: "oil", label: "Oil paint", short: "Oil" },
-  { id: "original", label: "Original", short: "Original" },
-  { id: "pbn", label: "By numbers", short: "Numbers" },
+type WorkspaceViewChoice = ViewMode | "value";
+
+const VIEWS: { id: WorkspaceViewChoice; label: string; short: string; icon: "brush" | "image" | "hash" | "value" }[] = [
+  { id: "oil", label: "Oil paint", short: "Oil", icon: "brush" },
+  { id: "original", label: "Original", short: "Original", icon: "image" },
+  { id: "pbn", label: "By numbers", short: "Numbers", icon: "hash" },
+  { id: "value", label: "Value study", short: "Value", icon: "value" },
 ];
 
-type MobileSheet = "views" | "tools" | "colors" | null;
+type MobileSheet = "views" | "transfer" | "analyze" | "paint" | null;
 
 /**
  * Full-screen painting workspace: the reference gets the screen (centered, big
@@ -68,8 +71,26 @@ export function FocusWorkspace(props: Props) {
 
   const iconBtn =
     "grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]";
+  const dockButton = (active: boolean) =>
+    `relative flex min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl px-1 py-1.5 text-[9px] font-semibold ${
+      active ? "bg-[var(--paper-2)] text-[var(--accent)]" : "text-[var(--ink-soft)]"
+    }`;
 
-  const currentView = VIEWS.find((item) => item.id === view) ?? VIEWS[0];
+  const currentView = workspaceTools.gray
+    ? VIEWS.find((item) => item.id === "value")!
+    : (VIEWS.find((item) => item.id === view) ?? VIEWS[0]);
+
+  const chooseView = (choice: WorkspaceViewChoice) => {
+    if (choice === "value") {
+      workspaceTools.setGray(true);
+      return;
+    }
+    workspaceTools.setGray(false);
+    onView(choice);
+  };
+
+  const viewIsActive = (choice: WorkspaceViewChoice) =>
+    choice === "value" ? workspaceTools.gray : !workspaceTools.gray && view === choice;
 
   const toggleSheet = (sheet: Exclude<MobileSheet, null>) => {
     setMobileSheet((current) => (current === sheet ? null : sheet));
@@ -203,10 +224,10 @@ export function FocusWorkspace(props: Props) {
             <button
               key={id}
               type="button"
-              onClick={() => onView(id)}
-              aria-pressed={view === id}
+              onClick={() => chooseView(id)}
+              aria-pressed={viewIsActive(id)}
               className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition ${
-                view === id
+                viewIsActive(id)
                   ? "bg-[var(--card-2)] text-[var(--ink)] shadow-[var(--shadow-sm)]"
                   : "text-[var(--ink-soft)]"
               }`}
@@ -225,32 +246,47 @@ export function FocusWorkspace(props: Props) {
 
       {/* Body */}
       <div className="flex min-h-0 flex-1 md:flex-row">
+        <aside className="relative hidden w-[78px] flex-none flex-col items-center border-r border-[var(--line)] bg-[var(--card)]/55 px-2 py-3 md:flex">
+          <span className="mb-2 text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--ink-soft)]">
+            Tools
+          </span>
+          <WorkspaceTools tools={workspaceTools} layout="rail" />
+        </aside>
+
         {/* Stage — reference centered, big and clear */}
-        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-3 pb-20 md:p-5">
+        <div
+          className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-3 pb-20 md:p-6"
+          style={{ background: "color-mix(in srgb, var(--paper-2) 58%, var(--paper))" }}
+        >
           <div
             className="w-full"
             style={{ maxWidth: `min(100%, calc((100dvh - 132px) * ${displayWidth} / ${displayHeight}))` }}
           >
-            <ImageCanvas
-              result={result}
-              view={view}
-              onSample={sampleColor}
-              done={done}
-              focus={focusColor}
-              workspaceTools={workspaceTools}
-              toolbar="desktop-only"
-            />
+            <div className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-2 shadow-[0_16px_42px_rgba(43,39,35,0.14)]">
+              <ImageCanvas
+                result={result}
+                view={view}
+                onSample={sampleColor}
+                done={done}
+                focus={focusColor}
+                workspaceTools={workspaceTools}
+                toolbar="hidden"
+              />
+            </div>
           </div>
         </div>
 
         {/* Desktop: side panel */}
-        <aside className="hidden overflow-y-auto border-l border-[var(--line)] p-4 md:block md:w-[320px]">
+        <aside className="hidden overflow-y-auto border-l border-[var(--line)] bg-[var(--paper)] p-4 md:block md:w-[340px]">
+          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ink-soft)]">
+            Paint
+          </p>
           {panelContent}
         </aside>
       </div>
 
       {sampled && !mobileSheet && !mixerOpen && (
-        <div role="status" className="fixed bottom-[76px] left-1/2 z-[53] flex -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 pl-2 shadow-[var(--shadow)] backdrop-blur md:bottom-4 md:left-4 md:translate-x-0">
+        <div role="status" className="fixed bottom-[76px] left-1/2 z-[53] flex -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 pl-2 shadow-[var(--shadow)] backdrop-blur md:bottom-4 md:left-[94px] md:translate-x-0">
           <span aria-hidden className="h-6 w-6 rounded-full border border-black/10" style={{ background: sampled }} />
           <b className="font-mono text-[11px]">{sampled}</b>
           <button
@@ -289,20 +325,27 @@ export function FocusWorkspace(props: Props) {
             aria-label={
               mobileSheet === "views"
                 ? "Choose reference view"
-                : mobileSheet === "tools"
-                  ? "Artist tools"
-                  : "Colors and painting steps"
+                : mobileSheet === "transfer"
+                  ? "Transfer tools"
+                  : mobileSheet === "analyze"
+                    ? "Image analysis tools"
+                    : "Paint colors and steps"
             }
-            className="fixed inset-x-2 bottom-[76px] z-[56] max-h-[62dvh] overflow-y-auto overscroll-contain rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-3.5 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] md:hidden"
-            style={{ animation: "sheet-up 0.24s cubic-bezier(0.2,0.8,0.2,1)" }}
+            className="fixed inset-x-2 z-[56] max-h-[62dvh] overflow-y-auto overscroll-contain rounded-2xl border border-[var(--line)] bg-[var(--paper)] p-3.5 shadow-[0_-12px_40px_rgba(0,0,0,0.25)] md:hidden"
+            style={{
+              bottom: "calc(4.75rem + env(safe-area-inset-bottom))",
+              animation: "sheet-up 0.24s cubic-bezier(0.2,0.8,0.2,1)",
+            }}
           >
             <div className="mb-3 flex items-center justify-between gap-3">
               <h2 className="text-[15px] font-bold">
                 {mobileSheet === "views"
                   ? "Reference view"
-                  : mobileSheet === "tools"
-                    ? "Artist tools"
-                    : "Colors & steps"}
+                  : mobileSheet === "transfer"
+                    ? "Transfer"
+                    : mobileSheet === "analyze"
+                      ? "Analyze"
+                      : "Paint"}
               </h2>
               <button
                 type="button"
@@ -315,38 +358,48 @@ export function FocusWorkspace(props: Props) {
             </div>
 
             {mobileSheet === "views" && (
-              <div className="grid grid-cols-3 gap-2" role="group" aria-label="Reference view">
-                {VIEWS.map(({ id, label }) => (
+              <div className="grid grid-cols-2 gap-2" role="group" aria-label="Reference view">
+                {VIEWS.map(({ id, label, icon }) => (
                   <button
                     key={id}
                     type="button"
-                    aria-pressed={view === id}
+                    aria-pressed={viewIsActive(id)}
                     onClick={() => {
-                      onView(id);
+                      chooseView(id);
                       setMobileSheet(null);
                     }}
-                    className={`rounded-xl border px-2 py-3 text-[12px] font-semibold transition ${
-                      view === id
+                    className={`flex items-center gap-2 rounded-xl border px-3 py-3 text-left text-[12px] font-semibold transition ${
+                      viewIsActive(id)
                         ? "border-[var(--accent)] bg-[var(--accent)] text-white"
                         : "border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)]"
                     }`}
                   >
+                    <Icon name={icon} size={17} />
                     {label}
                   </button>
                 ))}
               </div>
             )}
 
-            {mobileSheet === "tools" && (
+            {mobileSheet === "transfer" && (
               <>
-                <WorkspaceTools tools={workspaceTools} layout="panel" />
+                <WorkspaceTools tools={workspaceTools} layout="panel" group="transfer" />
                 <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-soft)]">
-                  Grid and guides stay aligned while you zoom. Value, adjustments, and flip only change your reference view.
+                  Grid and guides stay locked to the reference while you zoom. Flip helps you spot drawing errors with fresh eyes.
                 </p>
               </>
             )}
 
-            {mobileSheet === "colors" && panelContent}
+            {mobileSheet === "analyze" && (
+              <>
+                <WorkspaceTools tools={workspaceTools} layout="panel" group="analyze" />
+                <p className="mt-3 text-[11px] leading-relaxed text-[var(--ink-soft)]">
+                  Use Value to judge light and dark. Tap the reference with the eyedropper to identify an exact color.
+                </p>
+              </>
+            )}
+
+            {mobileSheet === "paint" && panelContent}
           </section>
         </>
       )}
@@ -354,44 +407,44 @@ export function FocusWorkspace(props: Props) {
       {/* Mobile: one predictable dock replaces scattered controls. */}
       <nav
         aria-label="Workspace tools"
-        className="fixed bottom-2 left-1/2 z-[57] grid w-[calc(100%_-_1rem)] max-w-sm -translate-x-1/2 grid-cols-4 gap-1 rounded-2xl border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 shadow-[var(--shadow)] backdrop-blur md:hidden"
+        className="fixed left-1/2 z-[57] grid w-[calc(100%_-_1rem)] max-w-md -translate-x-1/2 grid-cols-5 gap-1 rounded-2xl border border-[var(--line)] bg-[var(--card-2)]/95 p-1.5 shadow-[var(--shadow)] backdrop-blur md:hidden"
+        style={{ bottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
         <button
           type="button"
           onClick={() => toggleSheet("views")}
           aria-pressed={mobileSheet === "views"}
-          className={`flex min-w-0 flex-col items-center rounded-xl px-1 py-1.5 text-[10px] font-semibold ${
-            mobileSheet === "views" ? "bg-[var(--paper-2)] text-[var(--accent)]" : "text-[var(--ink-soft)]"
-          }`}
+          className={dockButton(mobileSheet === "views")}
         >
-          <span className="text-[13px] font-bold text-[var(--ink)]">{currentView.short}</span>
+          <Icon name={currentView.icon} size={17} className="text-[var(--ink)]" />
           View
         </button>
         <button
           type="button"
-          onClick={() => toggleSheet("tools")}
-          aria-pressed={mobileSheet === "tools"}
-          className={`flex flex-col items-center rounded-xl px-1 py-1.5 text-[10px] font-semibold ${
-            mobileSheet === "tools" ? "bg-[var(--paper-2)] text-[var(--accent)]" : "text-[var(--ink-soft)]"
-          }`}
+          onClick={() => toggleSheet("transfer")}
+          aria-pressed={mobileSheet === "transfer"}
+          className={dockButton(mobileSheet === "transfer")}
         >
           <Icon name="grid" size={17} className="text-[var(--ink)]" />
-          Tools
+          Transfer
         </button>
         <button
           type="button"
-          onClick={() => toggleSheet("colors")}
-          aria-pressed={mobileSheet === "colors"}
-          className={`relative flex flex-col items-center rounded-xl px-1 py-1.5 text-[10px] font-semibold ${
-            mobileSheet === "colors" ? "bg-[var(--paper-2)] text-[var(--accent)]" : "text-[var(--ink-soft)]"
-          }`}
+          onClick={() => toggleSheet("analyze")}
+          aria-pressed={mobileSheet === "analyze"}
+          className={dockButton(mobileSheet === "analyze")}
         >
-          <span className="flex h-[17px] items-center gap-0.5" aria-hidden>
-            {result.palette.slice(0, 3).map((color, index) => (
-              <span key={`${color.hex}-${index}`} className="h-3 w-3 rounded-full border border-black/10" style={{ background: color.hex }} />
-            ))}
-          </span>
-          Colors
+          <Icon name="pipette" size={17} className="text-[var(--ink)]" />
+          Analyze
+        </button>
+        <button
+          type="button"
+          onClick={() => toggleSheet("paint")}
+          aria-pressed={mobileSheet === "paint"}
+          className={dockButton(mobileSheet === "paint")}
+        >
+          <Icon name="brush" size={17} className="text-[var(--ink)]" />
+          Paint
           {doneCount > 0 && (
             <span className="absolute right-1 top-0 rounded-full bg-[var(--accent-2)] px-1 text-[8px] leading-3 text-white">
               {doneCount}
@@ -404,14 +457,10 @@ export function FocusWorkspace(props: Props) {
             setMobileSheet(null);
             openMixer();
           }}
-          className="flex flex-col items-center rounded-xl px-1 py-1.5 text-[10px] font-semibold text-[var(--ink-soft)]"
+          className={dockButton(false)}
         >
-          <span
-            className="h-[17px] w-[17px] rounded-full border border-black/10"
-            style={{ background: "conic-gradient(#c65d3b,#e0b64f,#2f6f6a,#5a8f4e,#c65d3b)" }}
-            aria-hidden
-          />
-          Mixer
+          <Icon name="palette" size={17} className="text-[var(--ink)]" />
+          Lab
         </button>
       </nav>
     </div>
