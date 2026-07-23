@@ -17,6 +17,7 @@ interface Props {
  *  Returning users see a "Recent" row instead of the steps list (spec 03). */
 export function Uploader({ onFile, onOpenProject, authed, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [recent, setRecent] = useState<HistoryProject[]>([]);
 
@@ -70,12 +71,33 @@ export function Uploader({ onFile, onOpenProject, authed, error }: Props) {
         }`}
       >
         <div className="text-4xl">🖼️</div>
-        <p className="mt-3 text-[17px] font-bold">Add a photo</p>
-        <p className="text-[13px] text-[var(--ink-soft)]">Choose, take, drag, or paste</p>
+        <p className="mt-3 text-[17px] font-bold">Choose a photo</p>
+        <p className="text-[13px] text-[var(--ink-soft)]">From your gallery or files · or drag &amp; paste</p>
       </button>
 
+      <button
+        type="button"
+        onClick={() => cameraRef.current?.click()}
+        className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-[14px] border border-[var(--line)] bg-[var(--card)] px-4 py-3 text-[14px] font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] active:scale-[0.99]"
+      >
+        <span className="text-[17px]">📷</span> Take a photo instead
+      </button>
+
+      {/* No `capture` here — that would force the camera and hide the gallery. */}
       <input
         ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) onFile(f);
+          e.target.value = "";
+        }}
+      />
+      {/* Dedicated camera path for when you do want to shoot straight away. */}
+      <input
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
@@ -83,6 +105,7 @@ export function Uploader({ onFile, onOpenProject, authed, error }: Props) {
         onChange={(e) => {
           const f = e.target.files?.[0];
           if (f) onFile(f);
+          e.target.value = "";
         }}
       />
 

@@ -32,6 +32,7 @@ async function fileToShotUrl(file: File): Promise<string> {
  */
 export function CanvasShot({ projectId, result }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [shot, setShot] = useState<string | null>(null);
   const [compare, setCompare] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -83,8 +84,20 @@ export function CanvasShot({ projectId, result }: Props) {
         )}
       </div>
 
+      {/* No `capture` — keeps the gallery/files option available. */}
       <input
         ref={inputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) capture(f);
+          e.target.value = "";
+        }}
+      />
+      <input
+        ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
@@ -97,14 +110,24 @@ export function CanvasShot({ projectId, result }: Props) {
       />
 
       {!shot ? (
-        <button
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-          className="flex w-full items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-[var(--line)] bg-[var(--card)] p-6 text-[14px] font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
-        >
-          <span className="text-[20px]">📷</span>
-          {busy ? "Adding…" : "Take a photo of your canvas"}
-        </button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            onClick={() => cameraRef.current?.click()}
+            disabled={busy}
+            className="flex flex-1 items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-[var(--line)] bg-[var(--card)] p-6 text-[14px] font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+          >
+            <span className="text-[20px]">📷</span>
+            {busy ? "Adding…" : "Take a photo"}
+          </button>
+          <button
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            className="flex flex-1 items-center justify-center gap-2 rounded-[18px] border-2 border-dashed border-[var(--line)] bg-[var(--card)] p-6 text-[14px] font-semibold text-[var(--ink-soft)] transition hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+          >
+            <span className="text-[20px]">🖼️</span>
+            Choose a photo
+          </button>
+        </div>
       ) : (
         <div>
           <div className={compare ? "grid grid-cols-2 gap-2" : ""}>
@@ -136,11 +159,18 @@ export function CanvasShot({ projectId, result }: Props) {
 
           <div className="mt-2.5 flex gap-2">
             <button
-              onClick={() => inputRef.current?.click()}
+              onClick={() => cameraRef.current?.click()}
               disabled={busy}
               className="rounded-full border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
             >
               {busy ? "Adding…" : "📷 Retake"}
+            </button>
+            <button
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+              className="rounded-full border border-[var(--line)] bg-[var(--card-2)] px-3.5 py-2 text-[12px] font-semibold hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+            >
+              🖼️ Choose
             </button>
             <button
               onClick={() => {
