@@ -36,29 +36,9 @@ export function Uploader({ onFile, quality, onQuality, error }: Props) {
 
   return (
     <div>
-      <header className="relative mb-4 overflow-hidden rounded-[24px] border border-[var(--line)] bg-[var(--card)] p-5 shadow-[var(--shadow-sm)]">
-        <span className="absolute -right-8 -top-10 h-32 w-32 rounded-full bg-[var(--accent-soft)] opacity-35 blur-3xl" aria-hidden />
-        <span className="absolute -bottom-12 left-[38%] h-28 w-28 rounded-full bg-[var(--accent-2)] opacity-15 blur-3xl" aria-hidden />
-        <div className="relative">
-          <p className="mb-2 flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--accent)]">
-            <Icon name="sparkles" size={13} /> Your pocket painting studio
-          </p>
-          <h1 className="max-w-[10ch] text-[38px] font-extrabold leading-[0.98] tracking-[-0.045em]">
-            Paint it for real.
-          </h1>
-          <p className="mt-3 max-w-[38ch] text-[13px] leading-relaxed text-[var(--ink-soft)]">
-            Turn any photo into an oil study, a practical palette, and exact paint-mixing recipes.
-          </p>
-          <div className="mt-4 flex items-center gap-1.5" aria-hidden>
-            {["#C65D3B", "#D79B62", "#2F6F6A", "#344E63", "#E5D3B3"].map((color, index) => (
-              <span
-                key={color}
-                className={`h-3 rounded-full border border-black/5 ${index === 0 ? "w-10" : "w-6"}`}
-                style={{ background: color }}
-              />
-            ))}
-          </div>
-        </div>
+      <header className="mb-5 pt-1">
+        <h1 className="ui-page-title">New project</h1>
+        <p className="ui-body mt-1.5 text-[var(--ink-soft)]">Choose a photo to build your painting reference and palette.</p>
       </header>
 
       <button
@@ -84,7 +64,7 @@ export function Uploader({ onFile, quality, onQuality, error }: Props) {
           <Icon name="imagePlus" size={25} />
         </div>
         <p className="mt-3 text-[16px] font-bold">Choose a reference photo</p>
-        <p className="mt-0.5 text-[11px] text-[var(--ink-soft)]">Gallery, files, drag, or paste</p>
+        <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">Gallery, files, drag, or paste</p>
       </button>
 
       <button
@@ -98,7 +78,7 @@ export function Uploader({ onFile, quality, onQuality, error }: Props) {
       <label className="mt-2.5 flex items-center gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3">
         <span className="min-w-0 flex-1">
           <b className="block text-[12px]">Image detail</b>
-          <span className="block text-[10px] leading-relaxed text-[var(--ink-soft)]">
+          <span className="block text-[11px] leading-relaxed text-[var(--ink-soft)]">
             {qualityDescription}
           </span>
         </span>
@@ -158,25 +138,6 @@ export function Uploader({ onFile, quality, onQuality, error }: Props) {
         </div>
       )}
 
-      <p className="mt-4 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-[var(--ink-soft)]">
-        <Icon name="check" size={13} className="text-[var(--accent-2)]" /> Your photo never leaves your device
-      </p>
-
-      <ol className="mt-7 grid gap-2.5">
-        {["Choose a reference", "Get its palette and painting order", "Mix the colors and paint it for real"].map(
-          (step, i) => (
-            <li
-              key={step}
-              className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--card)] px-3.5 py-3 text-[13px] shadow-[var(--shadow-sm)]"
-            >
-              <span className="grid h-[26px] w-[26px] flex-none place-items-center rounded-full bg-[var(--accent)] text-[12px] font-bold text-white">
-                {i + 1}
-              </span>
-              {step}
-            </li>
-          ),
-        )}
-      </ol>
     </div>
   );
 }

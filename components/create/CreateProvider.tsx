@@ -95,83 +95,68 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         }}
       />
 
-      {open && (
-        <div className="fixed inset-0 z-[65] flex items-end justify-center p-2 sm:items-center sm:p-4">
-          <button
-            type="button"
-            tabIndex={-1}
-            aria-label="Close new project"
-            className="absolute inset-0 bg-[rgba(30,22,14,0.48)] backdrop-blur-[2px]"
-            onClick={closeCreate}
-          />
-          <section
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-project-title"
-            className="relative w-full max-w-md rounded-[24px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.32)]"
-            style={{
-              paddingBottom: "max(1rem, env(safe-area-inset-bottom))",
-              animation: "sheet-up 0.24s cubic-bezier(0.2,0.8,0.2,1)",
-            }}
-          >
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[var(--line)] sm:hidden" aria-hidden />
-            <div className="flex items-start gap-3">
-              <span className="grid h-11 w-11 flex-none place-items-center rounded-2xl bg-[var(--accent)] text-white">
-                <Icon name="plus" size={22} strokeWidth={2.2} />
+      <div
+        aria-hidden={!open}
+        className={`fixed inset-0 z-40 flex items-end justify-center px-3 pt-3 transition-[opacity,visibility] duration-200 ${
+          open ? "visible pointer-events-auto opacity-100" : "invisible pointer-events-none opacity-0"
+        }`}
+        style={{ paddingBottom: "calc(7.25rem + env(safe-area-inset-bottom))" }}
+      >
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-label="Close new project"
+          className="absolute inset-0 bg-[rgba(30,22,14,0.42)] backdrop-blur-[6px]"
+          onClick={closeCreate}
+        />
+        <section
+          role="dialog"
+          aria-labelledby="new-project-title"
+          className={`relative w-full max-w-sm origin-bottom rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4 shadow-[0_18px_55px_rgba(0,0,0,0.26)] transition-[transform,opacity] duration-300 ease-out ${
+            open ? "translate-y-0 scale-100 opacity-100" : "translate-y-5 scale-[0.97] opacity-0"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 id="new-project-title" className="text-[18px] font-bold tracking-[-0.015em]">
+                New project
+              </h2>
+              <p className="mt-0.5 text-[12px] text-[var(--ink-soft)]">Choose a reference photo</p>
+            </div>
+            <button
+              type="button"
+              onClick={closeCreate}
+              aria-label="Close new project"
+              className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] text-[var(--ink-soft)] transition hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+            >
+              <Icon name="x" size={15} />
+            </button>
+          </div>
+
+          <div className="mt-4 grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={() => cameraRef.current?.click()}
+              className="flex min-h-[94px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[color-mix(in_srgb,var(--accent)_42%,var(--line))] bg-[color-mix(in_srgb,var(--accent)_8%,var(--card))] px-3 py-4 text-center text-[var(--ink)] transition hover:border-[var(--accent)] active:scale-[0.98]"
+            >
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--accent)] text-white">
+                <Icon name="camera" size={19} />
               </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[var(--accent)]">
-                  New project
-                </p>
-                <h2 id="new-project-title" className="text-[20px] font-extrabold tracking-[-0.025em]">
-                  Choose your reference
-                </h2>
-                <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-soft)]">
-                  Huely processes the photo privately on this device, then opens the painting workspace.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeCreate}
-                aria-label="Close new project"
-                className="grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)]"
-              >
-                <Icon name="x" size={15} />
-              </button>
-            </div>
-
-            <div className="mt-4 grid grid-cols-2 gap-2.5">
-              <button
-                type="button"
-                autoFocus
-                onClick={() => cameraRef.current?.click()}
-                className="flex min-h-[122px] flex-col items-center justify-center gap-2 rounded-[18px] bg-[var(--ink)] px-3 py-4 text-center text-[var(--paper)] shadow-[var(--shadow-sm)] active:scale-[0.98]"
-              >
-                <Icon name="camera" size={25} />
-                <span>
-                  <b className="block text-[13px]">Take a photo</b>
-                  <span className="mt-0.5 block text-[9px] opacity-70">Open the rear camera</span>
-                </span>
-              </button>
-              <button
-                type="button"
-                onClick={() => galleryRef.current?.click()}
-                className="flex min-h-[122px] flex-col items-center justify-center gap-2 rounded-[18px] border border-[var(--line)] bg-[var(--card)] px-3 py-4 text-center text-[var(--ink)] shadow-[var(--shadow-sm)] active:scale-[0.98]"
-              >
-                <Icon name="image" size={25} className="text-[var(--accent)]" />
-                <span>
-                  <b className="block text-[13px]">Choose a photo</b>
-                  <span className="mt-0.5 block text-[9px] text-[var(--ink-soft)]">Gallery or files</span>
-                </span>
-              </button>
-            </div>
-
-            <p className="mt-3 flex items-center justify-center gap-1.5 text-[10px] text-[var(--ink-soft)]">
-              <Icon name="check" size={12} className="text-[var(--accent-2)]" /> Original photos are never uploaded
-            </p>
-          </section>
-        </div>
-      )}
+              <b className="text-[13px]">Take photo</b>
+            </button>
+            <button
+              type="button"
+              onClick={() => galleryRef.current?.click()}
+              className="flex min-h-[94px] flex-col items-center justify-center gap-2 rounded-[16px] border border-[var(--line)] bg-[var(--card)] px-3 py-4 text-center text-[var(--ink)] transition hover:border-[var(--accent)] active:scale-[0.98]"
+            >
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-[var(--paper-2)] text-[var(--accent)]">
+                <Icon name="image" size={19} />
+              </span>
+              <b className="text-[13px]">Photo library</b>
+            </button>
+          </div>
+        </section>
+      </div>
     </CreateContext.Provider>
   );
 }

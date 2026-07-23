@@ -7,12 +7,13 @@ import { useMixer } from "@/components/mixer/MixerProvider";
 import { useCreateFlow } from "@/components/create/CreateProvider";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { AccountMenu } from "@/components/AccountMenu";
+import { StorageManager } from "@/components/history/StorageManager";
 import { Icon, type IconName } from "@/components/ui/Icon";
 
 export type NavUser = { email: string; displayName: string | null } | null;
 
 function itemClass(active: boolean) {
-  return `group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 text-[9px] font-semibold transition ${
+  return `group flex min-h-[56px] min-w-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-0.5 text-[10px] font-semibold transition ${
     active
       ? "bg-[var(--paper-2)] text-[var(--accent)]"
       : "text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
@@ -26,7 +27,7 @@ function NavIcon({ name, active }: { name: IconName; active: boolean }) {
         active ? "text-[var(--accent)]" : "text-[var(--ink-soft)] group-hover:text-[var(--ink)]"
       }`}
     >
-      <Icon name={name} size={18} strokeWidth={active ? 2.2 : 1.8} />
+      <Icon name={name} size={19} strokeWidth={active ? 2.2 : 1.8} />
     </span>
   );
 }
@@ -63,7 +64,7 @@ export function Navbar({ user }: { user: NavUser }) {
 
   return (
     <div
-      className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-3"
+      className="pointer-events-none fixed inset-x-0 bottom-0 z-[45] px-3"
       style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
     >
       <div className="relative mx-auto max-w-lg">
@@ -79,7 +80,7 @@ export function Navbar({ user }: { user: NavUser }) {
             <section
               role="dialog"
               aria-label="Account and appearance"
-              className="pointer-events-auto absolute bottom-[calc(100%+0.625rem)] right-0 z-10 w-[min(18rem,calc(100vw-1.5rem))] rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-3.5 shadow-[var(--shadow)]"
+              className="pointer-events-auto absolute bottom-[calc(100%+0.625rem)] right-0 z-10 max-h-[calc(100dvh-7rem)] w-[min(18rem,calc(100vw-1.5rem))] overflow-y-auto overscroll-contain rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-3.5 shadow-[var(--shadow)]"
             >
               <div className="flex items-center gap-3 border-b border-[var(--line)] pb-3">
                 <span className="grid h-10 w-10 flex-none place-items-center rounded-full bg-[var(--accent)] text-[13px] font-bold text-white">
@@ -126,6 +127,10 @@ export function Navbar({ user }: { user: NavUser }) {
                   </Link>
                 </div>
               )}
+
+              <div className="mt-3">
+                <StorageManager authed={Boolean(user)} />
+              </div>
             </section>
           </>
         )}
@@ -165,9 +170,10 @@ export function Navbar({ user }: { user: NavUser }) {
             onClick={() => {
               setAccountOpen(false);
               closeMixer();
-              openCreate();
+              if (createOpen) closeCreate();
+              else openCreate();
             }}
-            className="group relative flex min-h-[56px] min-w-0 flex-col items-center justify-end rounded-2xl px-0.5 pb-1 text-[9px] font-bold text-[var(--accent)]"
+            className="group relative flex min-h-[56px] min-w-0 flex-col items-center justify-end rounded-2xl px-0.5 pb-1 text-[10px] font-bold text-[var(--accent)]"
           >
             <span
               className={`absolute -top-6 grid h-14 w-14 place-items-center rounded-full border-[5px] border-[var(--card-2)] text-white shadow-[0_8px_22px_rgba(198,93,59,0.35)] transition group-active:scale-95 ${

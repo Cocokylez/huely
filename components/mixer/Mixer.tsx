@@ -19,12 +19,6 @@ const LAB_TABS: { id: LabTab; label: string; icon: IconName }[] = [
   { id: "paints", label: "My paints", icon: "brush" },
 ];
 
-const TAB_COPY: Record<LabTab, string> = {
-  recipe: "Name or choose a color and get the tube-by-tube recipe.",
-  mix: "Adjust paint parts and watch the mixed pigment change.",
-  paints: "Tell Huely which tubes you own so every recipe is practical.",
-};
-
 export function Mixer() {
   const { open, target, closeMixer } = useMixer();
   const [tab, setTab] = useState<LabTab>("recipe");
@@ -69,10 +63,9 @@ export function Mixer() {
             <Icon name="palette" size={20} />
           </span>
           <div className="min-w-0 flex-1">
-            <h2 id="paint-lab-title" className="text-[19px] font-extrabold tracking-[-0.02em]">
+            <h2 id="paint-lab-title" className="text-[18px] font-bold tracking-[-0.015em]">
               Paint Lab
             </h2>
-            <p className="truncate text-[11px] text-[var(--ink-soft)]">{TAB_COPY[tab]}</p>
           </div>
           <button
             type="button"
@@ -94,7 +87,7 @@ export function Mixer() {
               type="button"
               aria-pressed={tab === item.id}
               onClick={() => setTab(item.id)}
-              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[11px] font-semibold transition ${
+              className={`flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2.5 text-[12px] font-semibold transition ${
                 tab === item.id
                   ? "bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]"
                   : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
@@ -202,7 +195,7 @@ function RecipeLab({ onOpenMix, onOpenPaints }: { onOpenMix: () => void; onOpenP
 
         {projectPalette.length > 0 && (
           <div className="mt-3">
-            <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-soft)]">
+            <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-soft)]">
               From this project
             </p>
             <div className="flex flex-wrap gap-2">
@@ -232,12 +225,12 @@ function RecipeLab({ onOpenMix, onOpenPaints }: { onOpenMix: () => void; onOpenP
           <div className="grid grid-cols-[auto_1fr_auto] items-center gap-3">
             <div className="text-center">
               <span className="block h-14 w-14 rounded-2xl border border-black/10" style={{ background: targetHex }} />
-              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Target</span>
+              <span className="mt-1 block text-[11px] font-semibold text-[var(--ink-soft)]">Target</span>
             </div>
             <Icon name="arrowRight" size={20} className="justify-self-center text-[var(--ink-soft)]" />
             <div className="text-center">
               <span className="block h-14 w-14 rounded-2xl border border-black/10" style={{ background: recipe.hex }} />
-              <span className="mt-1 block text-[9px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">Recipe</span>
+              <span className="mt-1 block text-[11px] font-semibold text-[var(--ink-soft)]">Recipe</span>
             </div>
           </div>
 
@@ -303,7 +296,7 @@ function PaintingOrder() {
               key={`${step.index}-${order}`}
               className="grid grid-cols-[32px_38px_1fr] items-start gap-2.5 rounded-2xl bg-[var(--card-2)] p-2.5"
             >
-              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--ink)] text-[11px] font-extrabold text-[var(--paper)]">
+              <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--ink)] text-[11px] font-bold text-[var(--paper)]">
                 {order + 1}
               </span>
               <span
@@ -316,9 +309,9 @@ function PaintingOrder() {
                   <p className="truncate text-[12px] font-bold">
                     {step.label}: {colorName}
                   </p>
-                  <span className="text-[10px] font-semibold text-[var(--ink-soft)]">about {coverage}%</span>
+                  <span className="text-[11px] font-semibold text-[var(--ink-soft)]">about {coverage}%</span>
                 </div>
-                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--accent)]">
+                <p className="mt-0.5 text-[11px] font-semibold text-[var(--accent)]">
                   {step.color.hex.toUpperCase()}
                 </p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--ink-soft)]">{step.tip}</p>
@@ -350,8 +343,8 @@ function MixingBoard() {
             style={{ background: result?.hex ?? "var(--paper-2)" }}
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-soft)]">Your mixture</p>
-            <h3 className="truncate text-[18px] font-extrabold">{result?.name ?? "Add paint colors"}</h3>
+            <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--ink-soft)]">Your mixture</p>
+            <h3 className="truncate text-[17px] font-bold">{result?.name ?? "Add paint colors"}</h3>
             <p className="text-[12px] text-[var(--ink-soft)]" style={{ fontFamily: "var(--mono)" }}>
               {result ? result.hex : "No mixture yet"}
             </p>
@@ -398,7 +391,7 @@ function MixingBoard() {
                 </label>
                 <div className="min-w-0 flex-1">
                   <b className="block truncate text-[12px]">{nearestName(r, g, b)}</b>
-                  <span className="font-mono text-[10px] text-[var(--ink-soft)]">{slot.hex.toUpperCase()}</span>
+                  <span className="font-mono text-[11px] text-[var(--ink-soft)]">{slot.hex.toUpperCase()}</span>
                 </div>
                 <div className="flex items-center rounded-full bg-[var(--paper-2)] p-1">
                   <button
@@ -486,8 +479,8 @@ function PaintKit() {
   return (
     <div className="mx-auto max-w-2xl">
       <div className="rounded-[20px] border border-[var(--line)] bg-[var(--card-2)] p-4">
-        <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--accent)]">Your physical kit</p>
-        <h3 className="mt-1 text-[18px] font-extrabold">Recipes built from paints you own</h3>
+        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--accent)]">Your physical kit</p>
+        <h3 className="mt-1 text-[17px] font-bold">Recipes built from paints you own</h3>
         <p className="mt-1 text-[12px] leading-relaxed text-[var(--ink-soft)]">
           Huely currently has {myPaints.length} tubes available. Remove paints you do not own and add custom colors from your own brand.
         </p>

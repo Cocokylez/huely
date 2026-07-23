@@ -15,6 +15,10 @@
   --shadow: 0 10px 30px rgba(60, 45, 30, 0.1);
   --shadow-sm: 0 3px 10px rgba(60, 45, 30, 0.08);
   --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --type-caption: 0.6875rem;
+  --type-body: 0.8125rem;
+  --type-section: 1rem;
+  --type-title: 1.75rem;
 }
 
 :root[data-theme="dark"] {
@@ -81,6 +85,39 @@ a {
 ::selection {
   background: var(--accent-soft);
   color: var(--ink);
+}
+
+/* A restrained type scale for Huely's presentation screens. Tool-dense views
+ * keep their own compact labels, while headings and supporting copy stay even. */
+.ui-eyebrow {
+  font-size: var(--type-caption);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.ui-page-title {
+  font-size: var(--type-title);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.025em;
+}
+
+.ui-section-title {
+  font-size: var(--type-section);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ui-body {
+  font-size: var(--type-body);
+  line-height: 1.55;
+}
+
+.ui-caption {
+  font-size: var(--type-caption);
+  line-height: 1.45;
 }
 
 /* Focus: 2px accent ring offset 2px (spec 02) */

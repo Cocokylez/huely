@@ -281,6 +281,10 @@ export function StudioClient({ authed, openId }: Props) {
     if (openId) router.replace("/create");
   };
 
+  const exitWorkspace = () => {
+    router.replace("/");
+  };
+
   const download = () => {
     if (!result) return;
     if (view === "pbn" && canvasRef.current) {
@@ -380,7 +384,7 @@ export function StudioClient({ authed, openId }: Props) {
           onRestoreFocus={setFocusColor}
           onDoneNext={doneAndNext}
           onClearFocus={() => setFocusColor(null)}
-          onExit={() => setFocusMode(false)}
+          onExit={exitWorkspace}
         />
       )}
 

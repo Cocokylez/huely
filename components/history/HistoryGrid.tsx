@@ -1,12 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useHistory } from "@/lib/hooks/useHistory";
 import { getShot } from "@/lib/history/local";
 import type { HistoryProject } from "@/lib/history/types";
-import { StorageManager } from "@/components/history/StorageManager";
 import { Icon } from "@/components/ui/Icon";
 
 type ProjectSort = "recent" | "progress" | "oldest";
@@ -40,8 +38,8 @@ function CanvasBadge({ src }: { src?: string }) {
     <span className="absolute bottom-2 right-2 grid h-12 w-12 overflow-hidden rounded-xl border-2 border-white bg-[var(--card)] shadow-md">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt="Latest canvas check-in" className="h-full w-full object-cover" />
-      <span className="absolute inset-x-0 bottom-0 bg-black/55 py-0.5 text-center text-[7px] font-bold uppercase tracking-wide text-white">
-        Canvas
+      <span className="absolute bottom-1 right-1 grid h-4 w-4 place-items-center rounded-full bg-black/60 text-white" aria-hidden>
+        <Icon name="camera" size={9} strokeWidth={2} />
       </span>
     </span>
   );
@@ -101,42 +99,30 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
 
   return (
     <div className="space-y-5">
-      <header>
-        <div>
-          <p className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.16em] text-[var(--accent)]">
-            Your atelier
-          </p>
-          <h1 className="text-[30px] font-extrabold tracking-[-0.035em]">Projects</h1>
-          <p className="mt-1 text-[12px] text-[var(--ink-soft)]">
-            {authed ? "Synced to your Huely account" : "Private and saved on this device"}
-          </p>
-        </div>
+      <header className="pt-1">
+        <h1 className="ui-page-title">Projects</h1>
       </header>
 
       {!loading && !error && items.length > 0 && (
-        <section className="grid grid-cols-2 gap-2.5" aria-label="Project summary">
-          <div className="rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5 shadow-[var(--shadow-sm)]">
-            <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--paper-2)] text-[var(--accent)]">
-              <Icon name="projects" size={16} />
+        <section
+          className="grid grid-cols-2 overflow-hidden rounded-[18px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow-sm)]"
+          aria-label="Project summary"
+        >
+          <div className="flex min-h-[112px] flex-col items-center justify-center border-r border-[var(--line)] px-3 py-4 text-center">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--paper-2)] text-[var(--accent)]">
+              <Icon name="projects" size={15} />
             </span>
-            <p className="mt-3 text-[24px] font-extrabold leading-none">{items.length}</p>
-            <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ink-soft)]">
-              Active {items.length === 1 ? "project" : "projects"}
-            </p>
+            <strong className="mt-2 text-[28px] font-bold leading-none tabular-nums">{items.length}</strong>
+            <span className="mt-1 text-[12px] font-medium text-[var(--ink-soft)]">
+              {items.length === 1 ? "Project" : "Projects"}
+            </span>
           </div>
-          <div className="rounded-[18px] border border-[var(--line)] bg-[var(--card)] p-3.5 shadow-[var(--shadow-sm)]">
-            <div className="flex items-center justify-between">
-              <span className="grid h-8 w-8 place-items-center rounded-xl bg-[var(--paper-2)] text-[var(--accent-2)]">
-                <Icon name="listCheck" size={16} />
-              </span>
-              <span className="text-[10px] font-semibold text-[var(--ink-soft)]">
-                {completedSteps}/{totalSteps} colors
-              </span>
-            </div>
-            <p className="mt-3 text-[24px] font-extrabold leading-none">{overallProgress}%</p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--paper-2)]">
-              <div className="h-full rounded-full bg-[var(--accent-2)]" style={{ width: `${overallProgress}%` }} />
-            </div>
+          <div className="flex min-h-[112px] flex-col items-center justify-center px-3 py-4 text-center">
+            <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--paper-2)] text-[var(--accent-2)]">
+              <Icon name="listCheck" size={15} />
+            </span>
+            <strong className="mt-2 text-[28px] font-bold leading-none tabular-nums">{overallProgress}%</strong>
+            <span className="mt-1 text-[12px] font-medium text-[var(--ink-soft)]">Colors complete</span>
           </div>
         </section>
       )}
@@ -173,11 +159,11 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
             </span>
           </div>
           <div className="px-6 py-6">
-            <h2 className="text-[20px] font-extrabold tracking-[-0.02em]">Your first painting starts here</h2>
-            <p className="mx-auto mt-2 max-w-sm text-[12px] leading-relaxed text-[var(--ink-soft)]">
-              Add a reference photo and Huely will build the oil study, palette, mixing recipes, and painting order.
+            <h2 className="ui-section-title">Start your first painting</h2>
+            <p className="ui-body mx-auto mt-2 max-w-sm text-[var(--ink-soft)]">
+              Add a photo to build your reference, palette, and painting order.
             </p>
-            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-2)] px-4 py-2.5 text-[11px] font-semibold text-[var(--ink-soft)]">
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-[var(--paper-2)] px-4 py-2.5 text-[12px] font-semibold text-[var(--ink-soft)]">
               <Icon name="plus" size={14} className="text-[var(--accent)]" /> Tap the center plus below
             </p>
           </div>
@@ -197,7 +183,7 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Find a project"
                 aria-label="Find a project"
-                className="w-full rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-[12px] outline-none placeholder:text-[var(--ink-soft)] focus:border-[var(--accent)]"
+                className="w-full rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-9 pr-3 text-[13px] outline-none placeholder:text-[var(--ink-soft)] focus:border-[var(--accent)]"
               />
             </label>
             <label className="relative flex-none">
@@ -205,7 +191,7 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                 value={sort}
                 onChange={(event) => setSort(event.target.value as ProjectSort)}
                 aria-label="Sort projects"
-                className="appearance-none rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-3 pr-8 text-[11px] font-semibold outline-none focus:border-[var(--accent)]"
+                className="appearance-none rounded-full border border-[var(--line)] bg-[var(--card)] py-2.5 pl-3 pr-8 text-[12px] font-semibold outline-none focus:border-[var(--accent)]"
               >
                 <option value="recent">Newest</option>
                 <option value="progress">Progress</option>
@@ -223,8 +209,8 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
             <>
               <section>
                 <div className="mb-2 flex items-center justify-between gap-3">
-                  <h2 className="text-[13px] font-extrabold">Continue painting</h2>
-                  <span className="text-[10px] font-semibold text-[var(--ink-soft)]">Started {startedLabel(featured.createdAt)}</span>
+                  <h2 className="text-[15px] font-bold">Continue painting</h2>
+                  <span className="text-[11px] text-[var(--ink-soft)]">{startedLabel(featured.createdAt)}</span>
                 </div>
                 <article className="overflow-hidden rounded-[22px] border border-[var(--line)] bg-[var(--card)] shadow-[var(--shadow)]">
                   <div className="grid sm:grid-cols-[1.15fr_0.85fr]">
@@ -235,15 +221,15 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                       <CanvasBadge src={shots[featured.id]} />
                     </div>
                     <div className="flex flex-col p-4">
-                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--accent)]">
+                      <p className="text-[11px] font-semibold text-[var(--accent)]">
                         {progressFor(featured) === 100 ? "Painting complete" : "In progress"}
                       </p>
-                      <h3 className="mt-1 truncate text-[19px] font-extrabold tracking-[-0.02em]">{featured.name}</h3>
-                      <p className="mt-1 text-[11px] text-[var(--ink-soft)]">
+                      <h3 className="mt-1 truncate text-[18px] font-bold tracking-[-0.015em]">{featured.name}</h3>
+                      <p className="mt-1 text-[12px] text-[var(--ink-soft)]">
                         {featured.palette.length} palette colors · {new Set(featured.done).size} finished
                       </p>
                       <div className="mt-3">
-                        <div className="mb-1.5 flex items-center justify-between text-[10px] font-semibold text-[var(--ink-soft)]">
+                        <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-[var(--ink-soft)]">
                           <span>Painting progress</span>
                           <span>{progressFor(featured)}%</span>
                         </div>
@@ -257,7 +243,7 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
                       <button
                         type="button"
                         onClick={() => openProject(featured.id)}
-                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-4 py-3 text-[12px] font-bold text-[var(--paper)]"
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--ink)] px-4 py-3 text-[13px] font-semibold text-[var(--paper)]"
                       >
                         Open workspace <Icon name="arrowRight" size={15} />
                       </button>
@@ -269,8 +255,8 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
               {remaining.length > 0 && (
                 <section>
                   <div className="mb-2 flex items-center justify-between">
-                    <h2 className="text-[13px] font-extrabold">All projects</h2>
-                    <span className="text-[10px] text-[var(--ink-soft)]">{remaining.length} more</span>
+                    <h2 className="text-[15px] font-bold">All projects</h2>
+                    <span className="text-[11px] text-[var(--ink-soft)]">{remaining.length} more</span>
                   </div>
                   <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2">
                     {remaining.map((project) => (
@@ -308,22 +294,6 @@ export function HistoryGrid({ authed }: { authed: boolean }) {
         </>
       )}
 
-      <StorageManager authed={authed} />
-
-      <div className="rounded-[14px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3 text-[11px] leading-relaxed text-[var(--ink-soft)]">
-        <b className="text-[var(--ink)]">Private by default.</b>{" "}
-        {authed ? (
-          <>Project cards sync to your account; original and canvas photos stay on this device.</>
-        ) : (
-          <>
-            Projects stay in this browser.{" "}
-            <Link href="/login" className="font-semibold text-[var(--accent)]">
-              Log in
-            </Link>{" "}
-            to sync palettes and thumbnails across devices.
-          </>
-        )}
-      </div>
     </div>
   );
 }
@@ -352,15 +322,15 @@ function ProjectCard({
         <div className="relative aspect-[4/3] overflow-hidden bg-[var(--paper-2)]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={project.thumbDataUrl} alt={project.name} className="h-full w-full object-cover transition duration-300 hover:scale-[1.02]" />
-          <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[9px] font-bold text-white backdrop-blur-sm">
+          <span className="absolute left-2 top-2 rounded-full bg-black/55 px-2 py-1 text-[10px] font-bold text-white backdrop-blur-sm">
             {progress}% done
           </span>
           <CanvasBadge src={shot} />
         </div>
         <div className="p-3">
           <div className="pr-8">
-            <h3 className="truncate text-[13px] font-bold">{project.name}</h3>
-            <p className="mt-0.5 text-[10px] text-[var(--ink-soft)]">
+            <h3 className="truncate text-[14px] font-bold">{project.name}</h3>
+            <p className="mt-0.5 text-[11px] text-[var(--ink-soft)]">
               {startedLabel(project.createdAt)} · {project.palette.length} colors
             </p>
           </div>
