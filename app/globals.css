@@ -238,7 +238,13 @@ a {
   scrollbar-width: none;
   overscroll-behavior-x: contain;
   scroll-snap-type: x proximity;
+  touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
+  cursor: grab;
+}
+
+.paint-source-rail:active {
+  cursor: grabbing;
 }
 
 .paint-source-rail::-webkit-scrollbar {
@@ -408,9 +414,13 @@ button:hover > .paint-source-daub {
   z-index: 8;
   display: block;
   aspect-ratio: 1;
+  margin: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
   pointer-events: none;
   filter: drop-shadow(0 10px 9px rgba(58, 38, 22, 0.2));
-  transform-origin: 26% 76%;
+  transform-origin: 12% 82%;
 }
 
 .palette-brush-prop img {
@@ -432,7 +442,36 @@ button:hover > .paint-source-daub {
   right: -9%;
   width: 36%;
   opacity: 0.88;
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
   transform: rotate(6deg);
+}
+
+.palette-brush-prop--right:disabled {
+  cursor: default;
+}
+
+.palette-brush-prop--right:focus-visible {
+  border-radius: 50%;
+  outline: 3px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 3px;
+}
+
+.palette-brush-prop--right.is-held {
+  top: var(--brush-y);
+  left: var(--brush-x);
+  right: auto;
+  z-index: 32;
+  opacity: 1;
+  cursor: grabbing;
+  transform: translate(-10%, -82%) rotate(var(--brush-angle));
+  transition: none;
+  animation: none;
+}
+
+.palette-brush-prop--right.can-stir:not(.is-held):not(.is-stirring) {
+  animation: brush-ready 2.4s ease-in-out infinite;
 }
 
 .palette-brush-prop--right.is-stirring {
@@ -474,6 +513,20 @@ button:hover > .paint-source-daub {
   }
   100% {
     transform: translate(0, 0) rotate(6deg);
+  }
+}
+
+@keyframes brush-ready {
+  0%,
+  72%,
+  100% {
+    transform: rotate(6deg);
+  }
+  82% {
+    transform: translate(-3%, 2%) rotate(2deg);
+  }
+  91% {
+    transform: translate(1%, -1%) rotate(8deg);
   }
 }
 

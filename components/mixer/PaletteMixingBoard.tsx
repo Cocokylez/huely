@@ -34,7 +34,22 @@ interface PaintDrag {
   startX: number;
   startY: number;
   moved: boolean;
+  scrolling: boolean;
   overBoard: boolean;
+}
+
+interface BrushDrag {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  lastX: number;
+  lastY: number;
+  x: number;
+  y: number;
+  angle: number;
+  distance: number;
+  moved: boolean;
+  completed: boolean;
 }
 
 type PaintCss = CSSProperties & {
@@ -42,7 +57,15 @@ type PaintCss = CSSProperties & {
   "--blob-rotation"?: string;
 };
 
+type BrushCss = CSSProperties & {
+  "--brush-x"?: string;
+  "--brush-y"?: string;
+  "--brush-angle"?: string;
+};
+
 const BATCH_OPTIONS = [2, 5, 10, 20] as const;
+const STIR_DISTANCE = 130;
+const RESTING_BRUSH_TIP: BoardPoint = { x: 76, y: 39 };
 const DEFAULT_BLOB_POINTS: BoardPoint[] = [
   { x: 30, y: 31 },
   { x: 49, y: 25 },
@@ -98,14 +121,18 @@ export function PaletteMixingBoard() {
   const myPaints = useMyPaints();
   const projectPalette = useMixSource();
   const boardRef = useRef<HTMLDivElement>(null);
+  const sourceRailRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<PaintDrag | null>(null);
+  const brushDragRef = useRef<BrushDrag | null>(null);
   const mixingTimerRef = useRef<number | null>(null);
   const [sourceMode, setSourceMode] = useState<SourceMode>("tubes");
   const [batchMl, setBatchMl] = useState(5);
   const [drag, setDrag] = useState<PaintDrag | null>(null);
+  const [brushDrag, setBrushDrag] = useState<BrushDrag | null>(null);
   const [blobPoints, setBlobPoints] = useState<Record<string, BoardPoint>>({});
   const [mixing, setMixing] = useState(false);
   const [mixed, setMixed] = useState(false);
+  const [manualMix, setManualMix] = useState(false);
   const [mixRound, setMixRound] = useState(0);
   const [announcement, setAnnouncement] = useState("");
 
@@ -123,6 +150,7 @@ export function PaletteMixingBoard() {
   const sourcePaints = activeSourceMode === "project" ? projectPaints : myPaints;
   const totalParts = slots.reduce((sum, slot) => sum + slot.parts, 0);
   const onePartMl = totalParts ? batchMl / totalParts : 0;
+  const stirPercent = brushDrag ? Math.min(100, Math.round((brushDrag.distance / STIR_DISTANCE) * 100)) : 0;
 
   useEffect(
     () => () => {
@@ -135,6 +163,12 @@ export function PaletteMixingBoard() {
     setBatchMl(amount);
   };
 
+  const scrollPaintShelf = (direction: -1 | 1) => {
+    const rail = sourceRailRef.current;
+    if (!rail) return;
+    rail.scrollBy({ left: direction * Math.min(280, rail.clientWidth * 0.72), behavior: "smooth" });
+  };
+
   const resetMixVisual = () => {
     if (mixingTimerRef.current !== null) {
       window.clearTimeout(mixingTimerRef.current);
@@ -142,6 +176,7 @@ export function PaletteMixingBoard() {
     }
     setMixing(false);
     setMixed(false);
+    setManualMix(false);
   };
 
   const setActiveDrag = (next: PaintDrag | null) => {
@@ -181,7 +216,6 @@ export function PaletteMixingBoard() {
 
   const startPaintDrag = (event: ReactPointerEvent<HTMLButtonElement>, paint: Paint) => {
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
-    event.preventDefault();
     event.currentTarget.setPointerCapture(event.pointerId);
     setActiveDrag({
       paint,
@@ -191,6 +225,7 @@ export function PaletteMixingBoard() {
       startX: event.clientX,
       startY: event.clientY,
       moved: false,
+      scrolling: false,
       overBoard: isOverBoard(event.clientX, event.clientY),
     });
   };
@@ -198,13 +233,17 @@ export function PaletteMixingBoard() {
   const movePaintDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
     const current = dragRef.current;
     if (!current || current.pointerId !== event.pointerId) return;
-    event.preventDefault();
-    const moved = current.moved || Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 6;
+    const dx = event.clientX - current.startX;
+    const dy = event.clientY - current.startY;
+    const travel = Math.hypot(dx, dy);
+    const scrolling = current.scrolling || (event.pointerType === "touch" && travel > 6 && Math.abs(dx) > Math.abs(dy) * 1.1);
+    const moved = current.moved || (!scrolling && travel > 6);
     setActiveDrag({
       ...current,
       x: event.clientX,
       y: event.clientY,
       moved,
+      scrolling,
       overBoard: isOverBoard(event.clientX, event.clientY),
     });
   };
@@ -214,7 +253,7 @@ export function PaletteMixingBoard() {
     if (!current || current.pointerId !== event.pointerId) return;
     event.preventDefault();
     const overBoard = isOverBoard(event.clientX, event.clientY);
-    if (!cancelled && (overBoard || !current.moved)) {
+    if (!cancelled && !current.scrolling && (overBoard || !current.moved)) {
       dropPaint(current.paint, overBoard ? pointOnBoard(event.clientX, event.clientY) : null);
     }
     try {
@@ -225,19 +264,115 @@ export function PaletteMixingBoard() {
     setActiveDrag(null);
   };
 
-  const mixOnPalette = () => {
+  const mixOnPalette = (byHand = false) => {
     if (!result || slots.length < 2) return;
     if (mixingTimerRef.current !== null) window.clearTimeout(mixingTimerRef.current);
     setMixRound((round) => round + 1);
     setMixed(false);
     setMixing(true);
+    setManualMix(byHand);
     setAnnouncement(`Mixing ${result.name}`);
     mixingTimerRef.current = window.setTimeout(() => {
       setMixing(false);
       setMixed(true);
+      setManualMix(false);
       setAnnouncement(`${result.name} is ready`);
       mixingTimerRef.current = null;
-    }, 720);
+    }, byHand ? 380 : 720);
+  };
+
+  const setActiveBrushDrag = (next: BrushDrag | null) => {
+    brushDragRef.current = next;
+    setBrushDrag(next);
+  };
+
+  const brushPointFromGesture = (dragState: BrushDrag, clientX: number, clientY: number): BoardPoint => {
+    const rect = boardRef.current?.getBoundingClientRect();
+    if (!rect) return RESTING_BRUSH_TIP;
+    return {
+      x: Math.max(8, Math.min(92, RESTING_BRUSH_TIP.x + ((clientX - dragState.startX) / rect.width) * 100)),
+      y: Math.max(9, Math.min(84, RESTING_BRUSH_TIP.y + ((clientY - dragState.startY) / rect.height) * 100)),
+    };
+  };
+
+  const isStirringPoint = (point: BoardPoint): boolean =>
+    point.x >= 18 && point.x <= 82 && point.y >= 14 && point.y <= 73;
+
+  const startBrushDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (
+      !event.isPrimary ||
+      (event.pointerType === "mouse" && event.button !== 0) ||
+      slots.length < 2 ||
+      !result ||
+      mixing
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setActiveBrushDrag({
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      x: RESTING_BRUSH_TIP.x,
+      y: RESTING_BRUSH_TIP.y,
+      angle: 6,
+      distance: 0,
+      moved: false,
+      completed: false,
+    });
+    setAnnouncement("Brush picked up. Stir through the paint colors.");
+  };
+
+  const moveBrushDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const current = brushDragRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    event.preventDefault();
+
+    const point = brushPointFromGesture(current, event.clientX, event.clientY);
+    const segment = Math.min(32, Math.hypot(event.clientX - current.lastX, event.clientY - current.lastY));
+    const moved = current.moved || Math.hypot(event.clientX - current.startX, event.clientY - current.startY) > 4;
+    if (moved && !current.moved) resetMixVisual();
+    const distance = current.completed
+      ? current.distance
+      : current.distance + (isStirringPoint(point) ? segment : 0);
+    const angle = Math.max(-16, Math.min(18, 6 + (event.clientX - current.lastX) * 0.9));
+    const completed = current.completed || distance >= STIR_DISTANCE;
+    const next: BrushDrag = {
+      ...current,
+      lastX: event.clientX,
+      lastY: event.clientY,
+      x: point.x,
+      y: point.y,
+      angle,
+      distance,
+      moved,
+      completed,
+    };
+    setActiveBrushDrag(next);
+
+    if (completed && !current.completed) {
+      mixOnPalette(true);
+      if ("vibrate" in navigator) navigator.vibrate(18);
+    }
+  };
+
+  const finishBrushDrag = (event: ReactPointerEvent<HTMLButtonElement>, cancelled = false) => {
+    const current = brushDragRef.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    if (!cancelled && !current.completed && current.distance >= STIR_DISTANCE * 0.68) {
+      mixOnPalette(true);
+      if ("vibrate" in navigator) navigator.vibrate(18);
+    }
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // Pointer capture is released automatically when the gesture ends.
+    }
+    setActiveBrushDrag(null);
   };
 
   const copyResult = () => {
@@ -281,33 +416,66 @@ export function PaletteMixingBoard() {
             <h3 className="text-[15px] font-bold">Your paint shelf</h3>
             <p className="text-[11px] text-[var(--ink-soft)]">Drag a color onto the wood, or tap to add one part.</p>
           </div>
-          {projectPaints.length > 0 && (
-            <div className="flex flex-none rounded-full bg-[var(--paper-2)] p-1" role="group" aria-label="Paint source">
+          <div className="flex flex-none items-center gap-2">
+            {projectPaints.length > 0 && (
+              <div className="flex rounded-full bg-[var(--paper-2)] p-1" role="group" aria-label="Paint source">
+                <button
+                  type="button"
+                  onClick={() => setSourceMode("tubes")}
+                  aria-pressed={activeSourceMode === "tubes"}
+                  className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold transition ${
+                    activeSourceMode === "tubes"
+                      ? "bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]"
+                      : "text-[var(--ink-soft)]"
+                  }`}
+                >
+                  Tubes
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSourceMode("project")}
+                  aria-pressed={activeSourceMode === "project"}
+                  className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold transition ${
+                    activeSourceMode === "project"
+                      ? "bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]"
+                      : "text-[var(--ink-soft)]"
+                  }`}
+                >
+                  Project
+                </button>
+              </div>
+            )}
+            <div className="hidden items-center gap-1 sm:flex" role="group" aria-label="Scroll paint shelf">
               <button
                 type="button"
-                onClick={() => setSourceMode("tubes")}
-                aria-pressed={activeSourceMode === "tubes"}
-                className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold transition ${
-                  activeSourceMode === "tubes" ? "bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]" : "text-[var(--ink-soft)]"
-                }`}
+                onClick={() => scrollPaintShelf(-1)}
+                aria-label="Previous paints"
+                className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
               >
-                Tubes
+                <Icon name="arrowLeft" size={14} />
               </button>
               <button
                 type="button"
-                onClick={() => setSourceMode("project")}
-                aria-pressed={activeSourceMode === "project"}
-                className={`rounded-full px-2.5 py-1.5 text-[10px] font-bold transition ${
-                  activeSourceMode === "project" ? "bg-[var(--card-2)] text-[var(--accent)] shadow-[var(--shadow-sm)]" : "text-[var(--ink-soft)]"
-                }`}
+                onClick={() => scrollPaintShelf(1)}
+                aria-label="More paints"
+                className="grid h-8 w-8 place-items-center rounded-full border border-[var(--line)] bg-[var(--card-2)] text-[var(--ink-soft)] hover:text-[var(--ink)]"
               >
-                Project
+                <Icon name="arrowRight" size={14} />
               </button>
             </div>
-          )}
+          </div>
         </div>
 
-        <div className="paint-source-rail -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-2">
+        <div
+          ref={sourceRailRef}
+          className="paint-source-rail -mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-2"
+          onWheel={(event) => {
+            const rail = event.currentTarget;
+            if (rail.scrollWidth <= rail.clientWidth || Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+            event.preventDefault();
+            rail.scrollLeft += event.deltaY;
+          }}
+        >
           {sourcePaints.map((paint) => (
             <button
               key={`${activeSourceMode}-${paint.name}-${paint.hex}`}
@@ -321,7 +489,7 @@ export function PaletteMixingBoard() {
               onClick={(event) => {
                 if (event.detail === 0) dropPaint(paint);
               }}
-              className="group flex w-[62px] flex-none touch-none select-none flex-col items-center gap-1.5 rounded-2xl border border-transparent px-1 py-2 transition hover:border-[var(--line)] hover:bg-[var(--card-2)] focus-visible:bg-[var(--card-2)]"
+              className="group flex w-[62px] flex-none touch-pan-x select-none flex-col items-center gap-1.5 rounded-2xl border border-transparent px-1 py-2 transition hover:border-[var(--line)] hover:bg-[var(--card-2)] focus-visible:bg-[var(--card-2)]"
             >
               <span className="paint-source-daub" style={paintStyle(paint.hex)} aria-hidden />
               <span className="w-full truncate text-center text-[9px] font-semibold text-[var(--ink-soft)] group-hover:text-[var(--ink)]">
@@ -347,7 +515,10 @@ export function PaletteMixingBoard() {
         </div>
 
         <div className="relative mx-auto mt-1 aspect-square w-full max-w-[470px] select-none" ref={boardRef} role="group" aria-label="Wooden paint mixing palette">
-          <div className={`palette-drop-halo absolute inset-[5%] rounded-[46%] ${drag?.overBoard ? "is-active" : ""}`} aria-hidden />
+          <div
+            className={`palette-drop-halo absolute inset-[5%] rounded-[46%] ${drag?.moved && drag.overBoard ? "is-active" : ""}`}
+            aria-hidden
+          />
           <Image
             src="/art/mixing-palette.webp"
             alt=""
@@ -358,9 +529,33 @@ export function PaletteMixingBoard() {
             className="palette-wood absolute inset-0 h-full w-full object-contain"
           />
 
-          <span className={`palette-brush-prop palette-brush-prop--right ${mixing ? "is-stirring" : ""}`} aria-hidden>
+          <button
+            type="button"
+            disabled={slots.length < 2 || !result}
+            aria-label="Pick up the brush and stir the paint"
+            title={slots.length < 2 ? "Add two paint colors first" : "Pick up and stir"}
+            className={`palette-brush-prop palette-brush-prop--right ${
+              mixing && !manualMix && !brushDrag ? "is-stirring" : ""
+            } ${brushDrag ? "is-held" : ""} ${slots.length >= 2 && !mixing ? "can-stir" : ""}`}
+            style={
+              brushDrag
+                ? ({
+                    "--brush-x": `${brushDrag.x}%`,
+                    "--brush-y": `${brushDrag.y}%`,
+                    "--brush-angle": `${brushDrag.angle}deg`,
+                  } as BrushCss)
+                : undefined
+            }
+            onPointerDown={startBrushDrag}
+            onPointerMove={moveBrushDrag}
+            onPointerUp={(event) => finishBrushDrag(event)}
+            onPointerCancel={(event) => finishBrushDrag(event, true)}
+            onClick={(event) => {
+              if (event.detail === 0) mixOnPalette();
+            }}
+          >
             <Image src="/art/paint-brush.webp" alt="" width={900} height={900} draggable={false} />
-          </span>
+          </button>
           <span className="palette-brush-prop palette-brush-prop--left" aria-hidden>
             <Image src="/art/paint-brush.webp" alt="" width={900} height={900} draggable={false} />
           </span>
@@ -410,9 +605,25 @@ export function PaletteMixingBoard() {
             </span>
           )}
 
-          {drag?.overBoard && (
+          {drag?.moved && drag.overBoard && (
             <span className="pointer-events-none absolute left-1/2 top-[46%] z-40 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--ink)] px-3 py-2 text-[10px] font-bold text-[var(--paper)] shadow-lg">
               Release to add
+            </span>
+          )}
+
+          {slots.length >= 2 && !mixed && !mixing && !brushDrag && (
+            <span className="pointer-events-none absolute bottom-[11%] left-1/2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-[rgba(255,253,249,0.88)] px-3 py-1.5 text-[10px] font-bold text-[#574535] shadow-[var(--shadow-sm)] backdrop-blur-sm">
+              Pick up the brush and stir
+            </span>
+          )}
+
+          {brushDrag && !brushDrag.completed && (
+            <span className="pointer-events-none absolute bottom-[11%] left-1/2 z-40 flex -translate-x-1/2 items-center gap-2 rounded-full bg-[rgba(47,39,33,0.88)] px-3 py-1.5 text-[10px] font-bold text-white shadow-lg backdrop-blur-sm">
+              Stirring
+              <span className="h-1.5 w-16 overflow-hidden rounded-full bg-white/25">
+                <span className="block h-full rounded-full bg-white transition-[width]" style={{ width: `${stirPercent}%` }} />
+              </span>
+              {stirPercent}%
             </span>
           )}
         </div>
@@ -545,22 +756,35 @@ export function PaletteMixingBoard() {
           )}
         </section>
 
-        <button
-          type="button"
-          onClick={mixOnPalette}
-          disabled={slots.length < 2 || !result || mixing}
-          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--accent)] px-4 py-3.5 text-[12px] font-bold text-white shadow-[0_8px_20px_color-mix(in_srgb,var(--accent)_24%,transparent)] transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-45"
-        >
-          <Icon name={mixing ? "sparkles" : "brush"} size={16} />
-          {mixing ? "Mixing…" : mixed ? "Mix again" : "Mix on palette"}
-        </button>
+        <div className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--card-2)] p-3" role="status">
+          <span
+            className={`grid h-9 w-9 flex-none place-items-center rounded-full ${
+              mixed ? "bg-[var(--accent-2)] text-white" : "bg-[var(--paper-2)] text-[var(--accent)]"
+            }`}
+          >
+            <Icon name={mixed ? "check" : "brush"} size={16} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <b className="block text-[11px]">
+              {slots.length < 2 ? "Choose two paints" : mixing ? "Mixing your paint…" : mixed ? "Mixture ready" : "Mix it by hand"}
+            </b>
+            <span className="block text-[10px] leading-relaxed text-[var(--ink-soft)]">
+              {slots.length < 2
+                ? "Tap colors above to place them on the palette."
+                : mixed
+                  ? "Pick up the brush whenever you want to mix again."
+                  : "Drag the brush bristles through the colors."}
+            </span>
+          </div>
+          {brushDrag && <strong className="text-[12px] text-[var(--accent)]">{stirPercent}%</strong>}
+        </div>
 
         <p className="px-1 text-[10px] leading-relaxed text-[var(--ink-soft)]">
           Measure each part with the same scoop or syringe. Huely uses mL because pigment weights differ between colors.
         </p>
       </div>
 
-      {drag && (
+      {drag?.moved && (
         <span
           className="pointer-events-none fixed z-[90] -translate-x-1/2 -translate-y-1/2"
           style={{ left: drag.x, top: drag.y }}

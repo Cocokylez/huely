@@ -47,7 +47,7 @@ type MobileSheet = "views" | "transfer" | "analyze" | "paint" | "compare" | null
 
 /**
  * Full-screen painting workspace: the reference gets the screen (centered, big
- * and clear), tools + zoom on the image. The palette / views / mixer live in a
+ * and clear), tools beside the image. The palette / views / mixer live in a
  * side panel on desktop and one shared tool dock on mobile so the image stays clear.
  */
 export function FocusWorkspace(props: Props) {
@@ -572,12 +572,15 @@ export function FocusWorkspace(props: Props) {
         </button>
         <button
           type="button"
-          onClick={() => toggleSheet("compare")}
-          aria-pressed={mobileSheet === "compare"}
-          className={dockButton(mobileSheet === "compare")}
+          onClick={() => {
+            setMobileSheet(null);
+            openMixer();
+          }}
+          aria-pressed={mixerOpen}
+          className={dockButton(mixerOpen)}
         >
-          <Icon name="compare" size={17} className="text-[var(--ink)]" />
-          Compare
+          <Icon name="palette" size={17} className="text-[var(--ink)]" />
+          Paint Lab
         </button>
       </nav>
     </div>

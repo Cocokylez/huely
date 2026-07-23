@@ -584,7 +584,7 @@ export function WorkspaceView({
         <div
           role="group"
           aria-label="Image zoom controls"
-          className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--card-2)]/95 p-1 shadow-[var(--shadow-sm)]"
+          className="ml-auto mt-2 flex w-fit items-center gap-0.5 rounded-full border border-[var(--line)] bg-[var(--card-2)] p-0.5 shadow-[var(--shadow-sm)]"
         >
           <button
             type="button"
@@ -593,7 +593,7 @@ export function WorkspaceView({
               zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1 / 1.4);
             }}
             aria-label="Zoom out"
-            className="grid h-9 w-9 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+            className="grid h-8 w-8 place-items-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
           >
             <Icon name="zoomOut" size={17} />
           </button>
@@ -601,7 +601,7 @@ export function WorkspaceView({
             type="button"
             onClick={resetZoom}
             aria-label={`Reset zoom, currently ${Math.round(scale * 100)} percent`}
-            className="min-h-9 min-w-[48px] rounded-full px-2 text-[11px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)]"
+            className="min-h-8 min-w-[44px] rounded-full px-1.5 text-[10px] font-bold text-[var(--ink-soft)] hover:text-[var(--ink)]"
             title="Reset zoom"
           >
             {Math.round(scale * 100)}%
@@ -613,7 +613,7 @@ export function WorkspaceView({
               zoomAt(el.clientWidth / 2, el.clientHeight / 2, 1.4);
             }}
             aria-label="Zoom in"
-            className="grid h-9 w-9 place-items-center rounded-full text-[16px] font-bold text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
+            className="grid h-8 w-8 place-items-center rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper-2)] hover:text-[var(--ink)]"
           >
             <Icon name="zoomIn" size={17} />
           </button>
