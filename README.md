@@ -7,6 +7,7 @@ Turn a photo into colors you can **paint by hand** — an oil-paint reference, t
 ## Features
 
 - **Oil-paint render** of your photo, plus **Original** and **Paint-by-numbers** views.
+- **Adaptive image detail** — Fast, Balanced, Detailed, or device-aware Auto; Original view keeps a sharper zoom reference.
 - **Palette extraction** — dominant colors as numbered swatches with copyable HEX/RGB.
 - **Color Mixer** — blends like real pigment (RYB subtractive model, so blue + yellow → green) and **names any shade**.
 - **Eyedropper** — tap the image to grab any pixel's exact color.

@@ -64,3 +64,12 @@ export function imageDataToDataUrl(
   drawLabels?.(ctx);
   return c.toDataURL("image/png");
 }
+
+/** Compact photo cache format. JPEG keeps detailed references far smaller than PNG. */
+export function imageDataToJpegDataUrl(imageData: ImageData, quality = 0.9): string {
+  const canvas = document.createElement("canvas");
+  canvas.width = imageData.width;
+  canvas.height = imageData.height;
+  canvas.getContext("2d")!.putImageData(imageData, 0, 0);
+  return canvas.toDataURL("image/jpeg", quality);
+}

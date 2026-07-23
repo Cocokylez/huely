@@ -62,6 +62,8 @@ export function FocusWorkspace(props: Props) {
   const total = result.palette.length;
   const doneCount = [...done].filter((i) => i < total).length;
   const active = focusColor != null ? result.palette[focusColor] : null;
+  const displayWidth = view === "original" ? result.original.width : result.w;
+  const displayHeight = view === "original" ? result.original.height : result.h;
 
   const iconBtn =
     "grid h-9 w-9 flex-none place-items-center rounded-full border border-[var(--line)] bg-[var(--card)] text-[var(--ink-soft)] hover:border-[var(--accent)] hover:text-[var(--accent)]";
@@ -166,7 +168,9 @@ export function FocusWorkspace(props: Props) {
         </button>
         <div className="min-w-0 flex-1 text-center md:hidden">
           <b className="block text-[13px] leading-tight">Painting workspace</b>
-          <span className="block text-[10px] text-[var(--ink-soft)]">{currentView.label}</span>
+          <span className="block text-[10px] text-[var(--ink-soft)]">
+            {currentView.label} · {displayWidth}×{displayHeight}
+          </span>
         </div>
         <div className="mx-auto hidden gap-0.5 rounded-full bg-[var(--paper-2)] p-[3px] md:flex">
           {VIEWS.map(({ id, short }) => (
@@ -197,7 +201,7 @@ export function FocusWorkspace(props: Props) {
         <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto overscroll-contain p-3 pb-20 md:p-5">
           <div
             className="w-full"
-            style={{ maxWidth: `min(100%, calc((100dvh - 132px) * ${result.w} / ${result.h}))` }}
+            style={{ maxWidth: `min(100%, calc((100dvh - 132px) * ${displayWidth} / ${displayHeight}))` }}
           >
             <ImageCanvas
               result={result}

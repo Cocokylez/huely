@@ -16,7 +16,12 @@ import {
 } from "@/lib/history/save";
 import { imageDataToThumb } from "@/lib/image/thumbnail";
 import { nearestName } from "@/lib/image/colorNames";
-import { downloadImageData, printGuide, imageDataToDataUrl } from "@/lib/exports";
+import {
+  downloadImageData,
+  printGuide,
+  imageDataToDataUrl,
+  imageDataToJpegDataUrl,
+} from "@/lib/exports";
 import { useMixer } from "@/components/mixer/MixerProvider";
 import { setMixSource } from "@/components/mixer/mixSource";
 import { useToast } from "@/components/ui/ToastProvider";
@@ -51,10 +56,12 @@ export function StudioClient({ authed, openId }: Props) {
     result,
     error,
     colorCount,
+    quality,
     previewUrl,
     process,
     processDataUrl,
     setColorCount,
+    setQuality,
     reset,
   } = usePipeline();
   const { slots, loadSlots } = useMixer();
@@ -146,7 +153,7 @@ export function StudioClient({ authed, openId }: Props) {
           setName(nm);
           setDone(new Set());
           // Cache the full working-res source on-device for full-res reopen.
-          cacheSource(id, imageDataToDataUrl(result.original));
+          cacheSource(id, imageDataToJpegDataUrl(result.original));
         }
         setSaved(true);
       })
@@ -277,7 +284,16 @@ export function StudioClient({ authed, openId }: Props) {
     if (status === "processing") {
       return <Processing stage={stage} previewUrl={previewUrl} onCancel={startOver} />;
     }
-    return <Uploader onFile={handleFile} onOpenProject={openProject} authed={authed} error={error} />;
+    return (
+      <Uploader
+        onFile={handleFile}
+        onOpenProject={openProject}
+        quality={quality}
+        onQuality={setQuality}
+        authed={authed}
+        error={error}
+      />
+    );
   }
 
   const total = result.palette.length;
@@ -350,6 +366,9 @@ export function StudioClient({ authed, openId }: Props) {
         />
         <p className="mt-1.5 pb-1 text-center text-[12px] text-[var(--ink-soft)]">
           Tap to pick a color · pinch or scroll to zoom · drag to pan
+          <span className="block text-[10px] capitalize">
+            {result.original.width}×{result.original.height} original · {result.w}×{result.h} paint render · {result.quality}
+          </span>
         </p>
       </div>
 

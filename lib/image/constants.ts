@@ -1,4 +1,3 @@
-export const WORK_MAX = 1280; // longest edge of the working buffer (px) — higher = crisper zoom
 export const OIL_LEVELS = 24; // intensity buckets for the oil-paint filter
 
 /** Oil-paint brush radius scaled to the image so the painterly look stays

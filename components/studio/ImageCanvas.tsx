@@ -41,10 +41,17 @@ export function ImageCanvas({
   workspaceTools,
   toolbar,
 }: Props) {
+  const displayWidth = view === "original" ? result.original.width : result.w;
+  const displayHeight = view === "original" ? result.original.height : result.h;
+
   const draw = useCallback(
     (ctx: CanvasRenderingContext2D) => {
-      const layer =
-        view === "original" ? result.original : view === "pbn" ? result.pbnBase : result.oil;
+      if (view === "original") {
+        ctx.putImageData(result.original, 0, 0);
+        return;
+      }
+
+      const layer = view === "pbn" ? result.pbnBase : result.oil;
 
       const focusing = focus != null;
       const fading = focusing || (view === "pbn" && done && done.size);
@@ -90,8 +97,8 @@ export function ImageCanvas({
 
   return (
     <WorkspaceView
-      width={result.w}
-      height={result.h}
+      width={displayWidth}
+      height={displayHeight}
       draw={draw}
       onSample={onSample}
       canvasRef={canvasRef}

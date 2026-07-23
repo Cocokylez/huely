@@ -32,7 +32,11 @@ ctx.onmessage = (e: MessageEvent<WorkerRequest>) => {
       labels,
       index,
     };
-    ctx.postMessage(res);
+    ctx.postMessage(res, [
+      oil.data.buffer as ArrayBuffer,
+      base.data.buffer as ArrayBuffer,
+      index.buffer as ArrayBuffer,
+    ]);
     return;
   }
 
@@ -49,6 +53,6 @@ ctx.onmessage = (e: MessageEvent<WorkerRequest>) => {
       labels,
       index,
     };
-    ctx.postMessage(res);
+    ctx.postMessage(res, [base.data.buffer as ArrayBuffer, index.buffer as ArrayBuffer]);
   }
 };

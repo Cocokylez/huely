@@ -3,23 +3,30 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { HistoryProject } from "@/lib/history/types";
+import type { ImageQuality } from "@/lib/image/types";
+import { IMAGE_QUALITY_OPTIONS } from "@/lib/image/quality";
 import { localList } from "@/lib/history/local";
 import { cloudList } from "@/lib/history/cloud";
 
 interface Props {
   onFile: (file: File) => void;
   onOpenProject: (id: string) => void;
+  quality: ImageQuality;
+  onQuality: (quality: ImageQuality) => void;
   authed: boolean;
   error?: string | null;
 }
 
 /** Upload screen — hero, dropzone (choose / take / drag / paste), privacy line.
  *  Returning users see a "Recent" row instead of the steps list (spec 03). */
-export function Uploader({ onFile, onOpenProject, authed, error }: Props) {
+export function Uploader({ onFile, onOpenProject, quality, onQuality, authed, error }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [drag, setDrag] = useState(false);
   const [recent, setRecent] = useState<HistoryProject[]>([]);
+  const qualityDescription =
+    IMAGE_QUALITY_OPTIONS.find((option) => option.id === quality)?.description ??
+    IMAGE_QUALITY_OPTIONS[0].description;
 
   useEffect(() => {
     (authed ? cloudList() : localList())
@@ -82,6 +89,27 @@ export function Uploader({ onFile, onOpenProject, authed, error }: Props) {
       >
         <span className="text-[17px]">📷</span> Take a photo instead
       </button>
+
+      <label className="mt-2.5 flex items-center gap-3 rounded-[14px] border border-[var(--line)] bg-[var(--paper-2)] px-3.5 py-3">
+        <span className="min-w-0 flex-1">
+          <b className="block text-[12px]">Image detail</b>
+          <span className="block text-[10px] leading-relaxed text-[var(--ink-soft)]">
+            {qualityDescription}
+          </span>
+        </span>
+        <select
+          value={quality}
+          onChange={(event) => onQuality(event.target.value as ImageQuality)}
+          className="flex-none rounded-lg border border-[var(--line)] bg-[var(--card-2)] px-2.5 py-2 text-[12px] font-semibold text-[var(--ink)] outline-none focus:border-[var(--accent)]"
+          aria-label="Image processing detail"
+        >
+          {IMAGE_QUALITY_OPTIONS.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
       {/* No `capture` here — that would force the camera and hide the gallery. */}
       <input

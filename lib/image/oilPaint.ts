@@ -21,29 +21,32 @@ export function oilPaint(src: ImageData, radius: number, levels: number): ImageD
   const gSum = new Int32Array(levels);
   const bSum = new Int32Array(levels);
 
+  // Keep one neighborhood histogram and slide it across each row. This is the
+  // same effect as rebuilding the whole neighborhood per pixel, but reduces the
+  // expensive work from roughly radius² per pixel to radius per pixel.
   for (let y = 0; y < h; y++) {
     const y0 = Math.max(0, y - radius);
     const y1 = Math.min(h - 1, y + radius);
-    for (let x = 0; x < w; x++) {
-      count.fill(0);
-      rSum.fill(0);
-      gSum.fill(0);
-      bSum.fill(0);
-      const x0 = Math.max(0, x - radius);
-      const x1 = Math.min(w - 1, x + radius);
+    count.fill(0);
+    rSum.fill(0);
+    gSum.fill(0);
+    bSum.fill(0);
 
-      for (let ny = y0; ny <= y1; ny++) {
-        let idx = ny * w + x0;
-        for (let nx = x0; nx <= x1; nx++, idx++) {
-          const bin = intensity[idx];
-          const di = idx * 4;
-          count[bin]++;
-          rSum[bin] += data[di];
-          gSum[bin] += data[di + 1];
-          bSum[bin] += data[di + 2];
-        }
+    let x0 = 0;
+    let x1 = Math.min(w - 1, radius);
+    for (let ny = y0; ny <= y1; ny++) {
+      let idx = ny * w;
+      for (let nx = x0; nx <= x1; nx++, idx++) {
+        const bin = intensity[idx];
+        const di = idx * 4;
+        count[bin]++;
+        rSum[bin] += data[di];
+        gSum[bin] += data[di + 1];
+        bSum[bin] += data[di + 2];
       }
+    }
 
+    for (let x = 0; x < w; x++) {
       let best = 0;
       for (let b = 1; b < levels; b++) if (count[b] > count[best]) best = b;
       const n = count[best] || 1;
@@ -52,6 +55,35 @@ export function oilPaint(src: ImageData, radius: number, levels: number): ImageD
       od[o + 1] = (gSum[best] / n) | 0;
       od[o + 2] = (bSum[best] / n) | 0;
       od[o + 3] = 255;
+
+      if (x === w - 1) continue;
+      const nextX0 = Math.max(0, x + 1 - radius);
+      const nextX1 = Math.min(w - 1, x + 1 + radius);
+
+      if (nextX0 > x0) {
+        for (let ny = y0; ny <= y1; ny++) {
+          const idx = ny * w + x0;
+          const bin = intensity[idx];
+          const di = idx * 4;
+          count[bin]--;
+          rSum[bin] -= data[di];
+          gSum[bin] -= data[di + 1];
+          bSum[bin] -= data[di + 2];
+        }
+      }
+      if (nextX1 > x1) {
+        for (let ny = y0; ny <= y1; ny++) {
+          const idx = ny * w + nextX1;
+          const bin = intensity[idx];
+          const di = idx * 4;
+          count[bin]++;
+          rSum[bin] += data[di];
+          gSum[bin] += data[di + 1];
+          bSum[bin] += data[di + 2];
+        }
+      }
+      x0 = nextX0;
+      x1 = nextX1;
     }
   }
   return out;

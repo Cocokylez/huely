@@ -3,10 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fileToImageData, dataUrlToImageData } from "@/lib/image/loadImage";
 import { DEFAULT_COLOR_COUNT } from "@/lib/image/constants";
-import type { PipelineResult } from "@/lib/image/types";
+import { isImageQuality, resolveImageQuality } from "@/lib/image/quality";
+import type { ImageQuality, PipelineResult, ResolvedImageQuality } from "@/lib/image/types";
 import type { PipelineStage, WorkerRequest, WorkerResponse } from "@/lib/worker/messages";
 
 export type PipelineStatus = "idle" | "processing" | "ready" | "error";
+const QUALITY_KEY = "huely-image-quality";
 
 /**
  * Runs the image pipeline (oil paint + palette + paint-by-numbers) in a Web
@@ -20,11 +22,14 @@ export function usePipeline() {
   const idRef = useRef(0);
   const originalRef = useRef<ImageData | null>(null);
   const oilRef = useRef<ImageData | null>(null);
+  const resolvedQualityRef = useRef<ResolvedImageQuality>("balanced");
+  const qualityRef = useRef<ImageQuality>("auto");
 
   const [status, setStatus] = useState<PipelineStatus>("idle");
   const [stage, setStage] = useState<PipelineStage | null>(null);
   const [result, setResult] = useState<PipelineResult | null>(null);
   const [colorCount, setColorCountState] = useState(DEFAULT_COLOR_COUNT);
+  const [quality, setQualityState] = useState<ImageQuality>("auto");
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const previewRef = useRef<string | null>(null);
@@ -51,27 +56,29 @@ export function usePipeline() {
       if (msg.type === "process") {
         oilRef.current = msg.oil;
         setResult({
-          w: original.width,
-          h: original.height,
+          w: msg.oil.width,
+          h: msg.oil.height,
           original,
           oil: msg.oil,
           pbnBase: msg.pbnBase,
           palette: msg.palette,
           labels: msg.labels,
           index: msg.index,
+          quality: resolvedQualityRef.current,
         });
         setStatus("ready");
         setStage(null);
       } else if (msg.type === "requantize" && oilRef.current) {
         setResult({
-          w: original.width,
-          h: original.height,
+          w: oilRef.current.width,
+          h: oilRef.current.height,
           original,
           oil: oilRef.current,
           pbnBase: msg.pbnBase,
           palette: msg.palette,
           labels: msg.labels,
           index: msg.index,
+          quality: resolvedQualityRef.current,
         });
         setStatus("ready");
         setStage(null);
@@ -90,6 +97,18 @@ export function usePipeline() {
     };
   }, []);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(QUALITY_KEY);
+      if (isImageQuality(saved)) {
+        qualityRef.current = saved;
+        setQualityState(saved);
+      }
+    } catch {
+      // Keep Auto when storage is unavailable.
+    }
+  }, []);
+
   const process = useCallback(
     async (file: File) => {
       if (!file.type.startsWith("image/")) {
@@ -105,15 +124,19 @@ export function usePipeline() {
       previewRef.current = url;
       setPreviewUrl(url);
       try {
-        const imageData = await fileToImageData(file);
-        originalRef.current = imageData;
+        const profile = resolveImageQuality(qualityRef.current);
+        const prepared = await fileToImageData(file, profile);
+        originalRef.current = prepared.reference;
+        resolvedQualityRef.current = profile.id;
         const req: WorkerRequest = {
           type: "process",
           id: ++idRef.current,
-          imageData,
+          imageData: prepared.working,
           colorCount,
         };
-        workerRef.current?.postMessage(req);
+        const worker = workerRef.current;
+        if (!worker) throw new Error("Image processor is still starting. Try again.");
+        worker.postMessage(req, [prepared.working.data.buffer as ArrayBuffer]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not read that image.");
         setStatus("error");
@@ -125,28 +148,45 @@ export function usePipeline() {
 
   // Re-run the full pipeline from a cached (device-local) source image, at the
   // saved color count — used to reopen a project as a full-res workspace.
-  const processDataUrl = useCallback(async (url: string, count: number) => {
-    setError(null);
-    setStatus("processing");
-    setStage("painting");
-    clearPreview();
-    previewRef.current = null;
-    setPreviewUrl(url);
+  const processDataUrl = useCallback(
+    async (url: string, count: number) => {
+      setError(null);
+      setStatus("processing");
+      setStage("painting");
+      clearPreview();
+      previewRef.current = null;
+      setPreviewUrl(url);
+      try {
+        const profile = resolveImageQuality(qualityRef.current);
+        const prepared = await dataUrlToImageData(url, profile);
+        setColorCountState(count);
+        originalRef.current = prepared.reference;
+        resolvedQualityRef.current = profile.id;
+        const req: WorkerRequest = {
+          type: "process",
+          id: ++idRef.current,
+          imageData: prepared.working,
+          colorCount: count,
+        };
+        const worker = workerRef.current;
+        if (!worker) throw new Error("Image processor is still starting. Try again.");
+        worker.postMessage(req, [prepared.working.data.buffer as ArrayBuffer]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not open that project.");
+        setStatus("error");
+        setStage(null);
+      }
+    },
+    [],
+  );
+
+  const setQuality = useCallback((next: ImageQuality) => {
+    qualityRef.current = next;
+    setQualityState(next);
     try {
-      const imageData = await dataUrlToImageData(url);
-      setColorCountState(count);
-      originalRef.current = imageData;
-      const req: WorkerRequest = {
-        type: "process",
-        id: ++idRef.current,
-        imageData,
-        colorCount: count,
-      };
-      workerRef.current?.postMessage(req);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not open that project.");
-      setStatus("error");
-      setStage(null);
+      localStorage.setItem(QUALITY_KEY, next);
+    } catch {
+      // Preference remains active for this session.
     }
   }, []);
 
@@ -181,10 +221,12 @@ export function usePipeline() {
     result,
     error,
     colorCount,
+    quality,
     previewUrl,
     process,
     processDataUrl,
     setColorCount,
+    setQuality,
     reset,
   };
 }
